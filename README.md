@@ -1,0 +1,46 @@
+## JakelynnOS
+This is my second play project.  The first one JakelynnOS had too many bad design decisions.
+
+This OS will be x86 32 bit based, I may try a x86_64 one later on
+
+I'm hoping to correct many of these in this project.  Major improvements in design will include:
+
+* Create my memory map FIRST
+* Create my page directory and page table entries up front
+* Move the kernel to the higher half immediately
+* Create my GDT in the .data section so it is preloaded
+
+
+## Features
+
+* Uses GRUB2 and multiboot 2 standard
+* Written in GNU assembly, C, and C++ I will use the C23 standard
+* I have all warnings set on and have warnings set as errors, I do this to ensure I don't make assumptsion
+* In general I will try to have my includes mirror Linux, to make it easier for others to understand
+
+## TODOs
+
+* complete strtok() function to work without a heap (set size to 256 chars)
+* Get all the frame buffer info from MULTIBOOT2
+
+
+## 🛠️ Prerequisite
+
+* you will need an i686 cross compiler
+* you can go to osdev.org for how to build this (https://wiki.osdev.org/GCC_Cross-Compiler)
+
+## 📦 Building and Running
+
+* clone the repository
+* run the makefile in each lib* directory
+* run the makefile in the root directory
+
+## Credits
+
+* OSDev contributors
+ Octocontrabass, sebihepp, and nullplan for their help getting to the Higher Half
+
+* https://www.tutorialspoint.com/data_structures_algorithms/avl_tree_algorithm.htm for a self balancing binary tree
+
+## License 
+Disributed under GPL3 
