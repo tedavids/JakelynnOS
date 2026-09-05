@@ -19,6 +19,11 @@
 
 extern int printf(const char* string, ...);
 
+// print unformatted string
+// Parameters:  string -- String to print
+// Returns:     true if successful, false otherwise
+extern bool print(const char* string);
+
 // Put an individual character to the screen, at the current cursor position
 
 // Parameter:   ic -- the character to print

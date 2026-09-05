@@ -10,8 +10,8 @@ AS=i686-elf-gcc
 LD=i686-elf-gcc
 
 #initail flags
-#CFLAGS ?= -O2 -g 
-CFLAGS ?= -g 
+#CFLAGS ?= -O2 -g -std=c23
+CFLAGS ?= -g -std=c23
 CPPFLAGS ?=
 LDFLAGS ?= 
 LIBS ?=
@@ -37,7 +37,7 @@ CFLAGS := $(CFLAGS) -ffreestanding -Wall -Wextra -pedantic -Wconversion -Wcast-a
 		 -Wredundant-decls -Wsign-conversion -Wswitch-default -Wundef -Wfloat-equal -Werror -fPIC
 CPPFLAGS := $(CPPFLAGS) -D__is_kernel -Iinclude -g
 LDFLAGS := $(LDFLAGS) -nostdlib -L$(LIBDIR) -Wl,-Map,output.map
-LIBS := $(LIBS) -lc -ltty -lgcc -lkrnl -lintr -lkbd -lcmd
+LIBS := $(LIBS) -lc -ltty -lgcc -lkrnl -lintr -lkbd -ltests -lcmd
 #  -lintr -lcmd
 
 LIB_LIST = \
@@ -48,6 +48,7 @@ $(LIBDIR)/libc.a \
 $(LIBDIR)/libintr.a \
 $(LIBDIR)/libkbd.a \
 $(LIBDIR)/libcmd.a \
+$(LIBDIR)/libtests.a \
 
 #$(LIBDIR)/libgcc.a \
 #$(LIBDIR)/libstdio.a \
@@ -65,7 +66,7 @@ ASFLAGS:= -m32 -Wa,-alh -MD -g
 
 KERNEL_OBJS = \
 $(KERNEL_ARCH_OBJS) \
-$(OBJDIR)/kernel.o #\
+$(OBJDIR)/kernel.o \
 #$(OBJDIR)/execcmd.o \
 
 
@@ -88,14 +89,17 @@ $(OBJDIR)/crtend.o \
 $(OBJDIR)/crtn.o \
 
 
-.PHONY: all clean run debug
+
+.PHONY: all clean run runx86 debug debugx86 buildlibs
 
 .SUFFIXES: .o .S .cpp .c
 
-all: $(ISO) 
+all :  
+	$(MAKE) buildlibs
+	$(MAKE) $(ISO) 
 
 
-$(ISO) : $(TARGET) 
+$(ISO) :  $(TARGET) 
 	cp $(TARGET) $(ISODIR)/boot
 	grub2-mkrescue -o $(ISO) $(ISODIR) 
 
@@ -104,12 +108,12 @@ $(TARGET): $(OBJS) $(LIB_LIST) $(ARCHDIR)/linker.ld
 	grub2-file --is-x86-multiboot2 JakelynnOS.kernel 
 
 # libraries (do nothing they were changed)
-#$(LIBDIR)/libkrnl.a : ;
-#$(LIBDIR)/libtty.a : ;
-#$(LIBDIR)/libc.a : ;
-#$(LIBDIR)/libstdio.a : ;
-#$(LIBDIR)/libgcc.a : ;
-#$(LIBDIR)/libcmd.a : ;
+$(LIBDIR)/libkrnl.a : ;
+$(LIBDIR)/libtty.a : 
+$(LIBDIR)/libc.a : ;
+$(LIBDIR)/libstdio.a : ;
+$(LIBDIR)/libgcc.a : ;
+$(LIBDIR)/libcmd.a : ;
 
 # arch directory objects
 
@@ -140,16 +144,36 @@ $(OBJDIR)/kernel.o : $(SRCDIR)/kernel.c
 $(OBJDIR)/execcmd.o : $(SRCDIR)/execcmd.c 
 	$(CC) -MD -c $< -o $@ -std=gnu23 $(CFLAGS) $(CPPFLAGS) 
 
-clean: 
-	rm -f DragonOS.kernel
+clean:
+	$(MAKE) clean -C libtty
+	$(MAKE) clean -C libkbd
+	$(MAKE) clean -C libc 
+	$(MAKE) clean -C libkrnl
+	$(MAKE) clean -C libcmd
+	$(MAKE) clean -C libtests 
+	rm -f $(TARGET)
 	rm -f $(OBJS) *.o */*.o */*/*.o
 	rm -f $(OBJS:.o=.d) *.d */*.d *.*.d 
 
 
+buildlibs: 
+	$(MAKE) -C libtty
+	$(MAKE) -C libkbd
+	$(MAKE) -C libc 
+	$(MAKE) -C libkrnl
+	$(MAKE) -C libcmd
+	$(MAKE) -C libtests
+
 run:
 	qemu-system-i386 -readconfig qemu.conf -no-reboot -no-shutdown
 
+runx86: 
+	qemu-system-x86_64 -readconfig qemu.conf -no-reboot -no-shutdown
+
 debug:
 	qemu-system-i386 -readconfig qemu.conf -no-reboot -no-shutdown -s -S
+
+debugx86:
+	qemu-system-x86_64 -readconfig qemu.conf -no-reboot -no-shutdown -s -S
 
 -include $(OBJS:.o=.d)

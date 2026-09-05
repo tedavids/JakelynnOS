@@ -8,6 +8,7 @@ SECTIONS
 
     . = 0x00100000;
 
+
     /* the kernel will live at 3GB + 1M in the virtual address space, */
     /* which will be mapped to 1MB in the physical space. */
     /* Note: we page align the sections */
@@ -61,5 +62,6 @@ SECTIONS
     }
     _bss_end = .;
     _kernel_end = .;
-    
+    . = ALIGN (4K);
+    _heap_start = .;
 }

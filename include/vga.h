@@ -5,6 +5,12 @@
 
 #include <stdint.h>
 
+#include <80x25cursor.h>
+
+// defines
+#define VGA_MEMORY_START    0xFFBF8000
+
+// enums
 enum vga_color {
     VGA_COLOR_BLACK = 0,
     VGA_COLOR_BLUE = 1,
@@ -25,100 +31,86 @@ enum vga_color {
     VGA_COLOR_END 
 }; // enum vga_color
 
-struct cursor_pos_t {
-    size_t row;
-    size_t col;
-};
-
-struct vga_cursor_t {
-    uint8_t firstscanline;
-    uint8_t lastscanline;
-};
-
-extern struct vga_cursor_t VGA_CURSOR_BLOCK;
-extern struct vga_cursor_t VGA_CURSOR_UNDERLINE;
-extern struct vga_cursor_t VGA_CURSOR_THICK_UNDERLINE;
-
-extern struct cursor_pos_t cursorpos;
-
-static const  size_t VGA_80X25_ROWS = 25;
-static const size_t VGA_80X25_COLUMNS = 80;
-
-
-static const size_t VGA_CURSOR_MAX_LINEAL_ADDRESS = 2000;
-static const uint16_t VGA_CURSOR_ERROR = 65535;
+// type definitions
+typedef  bool (*moveCursor_fn)(bool allowscroll);
 
 // fuctions
 
-// set the cursor position for VGA 80x25 text mode
-
-// inputs:  row -- the row the cursor should be put on
-//          col -- the col the cursor should be put on
-
-// returns: true -- if row and column are valid
-//          false -- if either is out of bounds
-extern bool set80x25cursorPosXY(struct cursor_pos_t* cursor, int row, int col);
-extern bool set80x25cursorPos(struct cursor_pos_t* cursorpos);
-extern bool get80x25cursorPos(struct cursor_pos_t* cursorpos);
-
-// move cursor
-
-// inputs:  cursor          a pointer to the cursor
-//          alllowscroll    allow a scroll
-
-// returns: bool            true if we need a scroll false otherwise (could be scroll up or down)
-
-extern bool move80x25CursorUp(struct cursor_pos_t* cursor, bool allowscroll);
-extern bool move80x25CursorDown(struct cursor_pos_t* cursor, bool allowscroll);
-extern bool move80x25CursorLeft(struct cursor_pos_t* cursor, bool allowscroll);
-extern bool move80x25CursorRight(struct cursor_pos_t* cursor, bool allowscroll);
-
-// validate the cursor
-
-// inputs:  cursor  a pointer to the cursor to validate
-//          fix     do we fix the cursor 
-
-// returns: bool    true if the cursor is valid (may be valid becaue its been fixed)
-//                  false if the cursor is not valid and cant be fixed
-
-extern bool validate80x25Cursor(struct cursor_pos_t* cursor, bool fix);
-
-// enable the cursor visually
-// Parameters:  type - The type of cursor to use
-
-// Returns:     true if successful, false if not
-extern bool enableVGACursor(struct vga_cursor_t type);
-
-// disable the cursor visually
+// get max row or column size
 // Parameters:  None
+// Returns:     The ow or column size
 
-// Returns:     None
-extern void disableVGACursor();
+extern size_t vgaGetMaxRows();
+extern size_t vgaGetMaxCols();
 
 // Get the text color code for a character
 // Parameters:  fg -- The foreground color
 //              bg -- The background color
 
 // Retuns:      the color code to use with a character
-extern uint8_t crtVGATextColor( enum vga_color fg, enum vga_color bg);
+extern uint8_t vgaCreateTextColor( enum vga_color fg, enum vga_color bg);
 
 // get the formatted text for a character on a VGA screen
 // Parameters:  uc -- The character
 //              color -- The foreground and background color
 
 // Returns:     A value suitible for puting in the vga buffer
-extern uint16_t crtVGAText(unsigned char uc, uint8_t color);
+extern uint16_t vgaCreateText(unsigned char uc, uint8_t color);
 
-// get the position of the cursor in the VGA buffer
-// Parameters:  cursorpos -- The cursor position
+// blank a row to the background color
+// Parameters:  None
 
-// Returns:     The position in the buffer
-extern uint16_t cursorpostolineal(struct cursor_pos_t cursorpos);
+// Returns:     true if successful, false otherwise
+extern bool vgaClearRow(size_t row);
 
-// get the cursor position given the position in the VGA buffer
-// Parameter:   lineal -- The buffer position
+// scroll row up one line
+// Parameters:  row -- The row to scroll down
+// Returns      true if successful, false otherwise
+extern bool vgaScrollRowDown(size_t row);
 
-// Returns:     The curpos in cursor_pos_t format given a lineal address
-extern struct cursor_pos_t linealtocursorpos(uint16_t lineal);
+// scroll row down one line
+// Parameters:  row -- The row to scroll up
+// Returns      true if successful, false otherwise
+extern bool vgaScrollRowUp(size_t row);
+
+// scroll the entire screen
+// Parameters:  none
+// Returns:     true if successful, false otherwise
+extern bool vgaScrollAll();
+
+// clear the entire screen to the default color
+// Parameters: None
+// Return:      true if successful, false otherwise;
+extern bool vgaClearScreen();
+
+// put a character on the screen
+// Parameters:  color -- The color code for the character
+// Returns:     true if the put is successful, false otherwise
+
+extern bool vgaPutChar(uint8_t color, uint8_t character, struct cursor_pos_t position);
+
+// set the text color
+// Paremeters:  color -- new background color
+// Returns:     old background color
+extern uint8_t vgaSetTextColor(uint8_t color);
+
+// get background color
+// Parameters:  None
+// Returns:     The background color
+extern uint8_t vgaGetTextColor();
+
+// enable the vga cursor
+// Parameters:  type the cursor type
+// Returns:     true if successful, false otherwise 
+extern bool vgaEnableCursor(struct cursor_t type);
+
+// Disable the cursor
+// Parameters:  None
+// Returns None
+extern void vgaDisableCursor();
+
+
+// initialize vga
+extern bool initVGA(struct cursor_pos_t *cursor);
 
 #endif

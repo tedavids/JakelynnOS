@@ -20,8 +20,16 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 
 ## TODOs
 
-* complete strtok() function to work without a heap (set size to 256 chars)
+* Get test scripts written
+  * libc
+  * libkrnl
+  * libintr
+  * libcmd
+* Get physical memory manager working
+* Get Virtual Memory Manager working
 * Get all the frame buffer info from MULTIBOOT2
+* Print all multiboot info
+* Set up Heap
 
 
 ## 🛠️ Prerequisite
@@ -32,8 +40,7 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 ## 📦 Building and Running
 
 * clone the repository
-* run the makefile in each lib* directory
-* run the makefile in the root directory
+* run the makefile in the project directory
 
 ## Credits
 

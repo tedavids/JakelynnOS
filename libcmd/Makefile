@@ -17,8 +17,8 @@ AS=i686-elf-gcc
 LD=i686-elf-gcc
 
 #initail flags
-CFLAGS ?= -O2 -g 
-#CFLAGS ?= -g
+#CFLAGS ?= -O2 -g -std=c23
+CFLAGS ?= -g -std=c23
 CPPFLAGS ?=
 LDFLAGS ?= 
 LIBS ?=
@@ -38,7 +38,7 @@ LIBTTY_CPPFLAGS := $(LIBTTY_CPPFLAGS) $(ARCH_CPPFLAGS)
 
 FREEOBJS=$(OBJDIR)/dump.o \
 $(OBJDIR)/docmd.o \
-$(OBJDIR)/mmap.o \
+$(OBJDIR)/printmultiboot.o \
 
 HOSTEDOBJS = \
 
@@ -61,7 +61,7 @@ $(OBJDIR)/dump.o : $(SRCDIR)/dump.c
 $(OBJDIR)/docmd.o : $(SRCDIR)/docmd.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
-$(OBJDIR)/mmap.o : $(SRCDIR)/mmap.c
+$(OBJDIR)/printmultiboot.o : $(SRCDIR)/printmultiboot.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:

@@ -16,7 +16,7 @@ char* strncpy(char* dest, const char* const src, size_t size) {
     // check invalid parms
     if(!dest || !src || (size <= 0)) return nullptr;
 
-    size_t copylen = ( (strlen(src) + 1) < size) ? strlen(src) : size;
+    size_t copylen = ( (strlen(src) + 1) < size) ? strlen(src): size;
 
     for (size_t i = 0; i < copylen; i++) {
         dest[i] = src[i];

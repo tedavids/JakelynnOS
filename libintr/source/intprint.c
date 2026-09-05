@@ -6,7 +6,7 @@
 extern uint32_t stack_bottom;
 void intPrintGeneralInfo(const char* intName, uint32_t segment, uint32_t address, uint32_t flags, uint8_t cpl) {
     printf("\r\n%s\n\r", intName);
-    printf("\r\nAddress: 0x%Xl\r\n", address);
+    printf("\r\nAddress: 0X%Xl\r\n", address);
     printf("Code Segment: %xl, Privledge level: %ib\n\r", segment, cpl);
 
     // check for stack overflow

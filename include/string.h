@@ -6,6 +6,19 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdint.h>
+#include <limits.h>
+
+
+
+// Return a pointer to the position c in a memory block
+
+// Parameters:  s -- pointer to the memory
+//              c -- the character to look for
+//              n -- the size of hte memory block
+
+// Returns:     a pointer to the character or nullptr if not found
+extern void *memchr(void *s, int c, size_t n);
 
 // memory functions
 // compare memory
@@ -42,8 +55,26 @@ extern void* memmove(void* dstptr, const void* srcptr, size_t size);
 // returns:     a pointer to the destination, or nullptr if an error occurrs
 extern void* memset(void* buffptr, int value, size_t size);
 
+// find the first occurance of c in the memory pointed to by s
+
+// Parameters:  s -- The start of memory to check
+//              c -- the character to check for
+
+// returns:     a poitner to the character or nullptr
+
+extern void * __rawmemchr (void *s, int c);
 
 // string functions
+
+// string to integer 
+// Parameters:  s - string to convert
+// returns:     the integer value of a string
+//              Note:  an error will return MIN_x, MAX_x, or 0
+extern int16_t  strtoi(const char * const __restrict s);
+extern uint16_t strtoui(const char * const __restrict s);
+extern int32_t strtol(const char * const __restrict s);
+extern uint32_t strtoul(const char * const __restrict s);
+
 // get the length of a string
 // Parameters:  str -- the string to check
 
@@ -67,14 +98,14 @@ extern char* strncpy(char* dest, const char * const src, size_t bufsize);
 //              if both s1 and s2 are null return 0, if s1 is null return 1, if s2 is null return -1
 extern int strncmp(int len, const char* const s1, const char* const s2);
 
+
 // Get a series of substrings
 // as long as the string remains the same gets the next token
-// Parameters:  str -- The string to scan
+// Parameters:  str -- The string to scan, if null use last string
 //              delim -- a list of characters that are delimiterssssssss
-//              buffer -- a pointer to the destination
-//              buflen -- the length of the buffer, including the trailing null
+
 // Returns:     a pointer to the buffer, or null ptr if end of string or an error occurs
-extern char* strntok(const char* const str, const char * const delim, char *buffer, int buflen);
+extern char* strtokbuf(const char* const str, const char * const delim,char* buff, int buflen,  int start, int *newstart);
 
 // trim leading characters
 // Parameters:  c - the character to trim

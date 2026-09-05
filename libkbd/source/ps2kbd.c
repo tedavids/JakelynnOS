@@ -132,7 +132,90 @@ void putKeypressInBuffer(uint8_t key, bool extended) {
         // are we rolling back to the start
         if (kbdHead >= KBD_BUFFER_SIZE) kbdHead = 0;
     } else {
-        // TODO: beep
+        printf("Keyboard buffer full\n\r");
+    }
+}
+
+void processExtendedKeypress() {
+    // check that we have a key
+    auto status = getPortByte(KBD_STATUS_PORT);
+    if (status & KBD_STATUS_OUTBUF_HAS_DATA) {
+        uint8_t extcode = (uint8_t) getPortByte(KBD_DATA_PORT);
+        // process keycode
+        switch (extcode) {
+        case 0x1C: // keypad enter
+            putKeypressInBuffer('\n',false);
+            break;
+        case 0x1D: // right control pressed
+            // complex one if we have yet another byte, its a pause
+            // otherwise its a right control pressed
+            auto status1D = getPortByte(KBD_STATUS_PORT);
+            if (status1D & KBD_STATUS_OUTBUF_HAS_DATA) {
+                if (shift) {
+                    putKeypressInBuffer(0xA2,false); // break
+                } else {
+                    putKeypressInBuffer(0xA1,false); // pause
+                }
+            } else {
+                ctrlRight = true;
+                setCtrl();
+            }
+            break;
+        case 0x2A: // print screen
+            if (shift) {
+                putKeypressInBuffer(0xA4,false); // sys req
+            } else {
+                putKeypressInBuffer(0xA4,false); // print screen
+            }
+            break;
+        case 0x35: // keypad /
+            putKeypressInBuffer('/',false);
+            break;
+        case 0x38: // right alt pressed
+            altRight = true;
+            setAlt();
+            break;
+        case 0x47: // home
+            putKeypressInBuffer(0x9C,false);
+            break;
+        case 0x48: // arrow up
+            putKeypressInBuffer(0x98,false); // arrow up
+            break;
+        case 0x49: // page up
+            putKeypressInBuffer(0x9D,false);
+            break;
+        case 0x4B: // left arrow
+            putKeypressInBuffer(0x9B,false);
+            break;
+        case 0x4D: // right arrow
+            putKeypressInBuffer(0x9A,false);
+            break;
+        case 0x4F: // end
+            putKeypressInBuffer(0x9F,false);
+            break;
+        case 0x50: // down arrow
+            putKeypressInBuffer(0x99,false);
+            break;
+        case 0x51: // page down
+            putKeypressInBuffer(0x9E,false);
+            break;
+        case 0x52: // insert
+            putKeypressInBuffer(0xA3,false);
+            break;
+        case 0x53: // delete
+            putKeypressInBuffer(0x7F,false);
+            break;
+        case 0x9D: // right ctl released
+            ctrlRight = false;
+            setCtrl();
+            break;
+        case 0x8B: // right alt released
+            altRight = false;
+            setAlt();
+            break;
+        default: // ignore
+            break;
+        }
     }
 }
 
@@ -784,88 +867,10 @@ void processKeypress(uint8_t keycode) {
             setAlt();
             break;
         case 0xE0: // extended keys
-            // check that we have a key
-            auto status = getPortByte(KBD_STATUS_PORT);
-            if (status & KBD_STATUS_OUTBUF_HAS_DATA) {
-                uint8_t extcode = (uint8_t) getPortByte(KBD_DATA_PORT);
-                // process keycode
-                switch (extcode) {
-                case 0x1C: // keypad enter
-                    putKeypressInBuffer('\n',false);
-                    break;
-                case 0x1D: // right control pressed
-                    // complex one if we have yet another byte, its a pause
-                    // otherwise its a right control pressed
-                    auto status1D = getPortByte(KBD_STATUS_PORT);
-                    if (status1D & KBD_STATUS_OUTBUF_HAS_DATA) {
-                        if (shift) {
-                            putKeypressInBuffer(0xA2,false); // break
-                        } else {
-                            putKeypressInBuffer(0xA1,false); // pause
-                        }
-                    } else {
-                       ctrlRight = true;
-                       setCtrl();
-                    }
-                    break;
-                case 0x2A: // print screen
-                    if (shift) {
-                        putKeypressInBuffer(0xA4,false); // sys req
-                    } else {
-                        putKeypressInBuffer(0xA4,false); // print screen
-                    }
-                    break;
-                case 0x35: // keypad /
-                    putKeypressInBuffer('/',false);
-                    break;
-                case 0x38: // right alt pressed
-                    altRight = true;
-                    setAlt();
-                    break;
-                case 0x47: // home
-                    putKeypressInBuffer(0x9C,false);
-                    break;
-                case 0x48: // arrow up
-                    putKeypressInBuffer(0x98,false); // arrow up
-                    break;
-                case 0x49: // page up
-                    putKeypressInBuffer(0x9D,false);
-                    break;
-                case 0x4B: // left arrow
-                    putKeypressInBuffer(0x9B,false);
-                    break;
-                case 0x4D: // right arrow
-                    putKeypressInBuffer(0x9A,false);
-                    break;
-                case 0x4F: // end
-                    putKeypressInBuffer(0x9F,false);
-                    break;
-                case 0x50: // down arrow
-                    putKeypressInBuffer(0x99,false);
-                    break;
-                case 0x51: // page down
-                    putKeypressInBuffer(0x9E,false);
-                    break;
-                case 0x52: // insert
-                    putKeypressInBuffer(0xA3,false);
-                    break;
-                case 0x53: // delete
-                    putKeypressInBuffer(0x7F,false);
-                    break;
-                case 0x9D: // right ctl released
-                    ctrlRight = false;
-                    setCtrl();
-                    break;
-                case 0x8B: // right alt released
-                    altRight = false;
-                    setAlt();
-                    break;
-                default: // ignore
-                    break;
-                }
-            }
-    default:    // ignore
-        break;
+            processExtendedKeypress();
+            break;
+        default:    // ignore
+            break;
     }
 }
 
@@ -877,6 +882,8 @@ void ps2kbd_handler(struct interrupt_frame_t *parms) {
         // if we get too many errors, we disable the keyboard
         if (!keyboardDisabled) {
             processKeypress(keycode);
+        } else {
+            printf("keyboard disabled\n\r");
         }
     }
     putPortByte(APIC_PIC1_COMMAND_PORT, APIC_END_OF_INTERRUPT);

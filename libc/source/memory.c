@@ -2,6 +2,21 @@
 
 #include <string.h>
 
+
+void *memchr(void *s, int c, size_t n) {
+    unsigned char *p = (unsigned char *)s;
+    unsigned char uc = (unsigned char)c;
+
+    while (n--) {
+        if (*p == uc) {
+            return (void *)p;
+        }
+        p++;
+    }
+
+    return NULL;
+}
+
 // Compare two blocks of memory
 //  If the first block is 'smaller' ie. via the value of each char it return -1
 //  If both blocks are the same, it returns 0

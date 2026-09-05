@@ -17,8 +17,8 @@ AS=i686-elf-gcc
 LD=i686-elf-gcc
 
 #initail flags
-#CFLAGS ?= -O2 -ggdb
-CFLAGS ?=  -g -std=gnu23 
+#CFLAGS ?= -O2 -ggdb  -std=gnu23
+CFLAGS ?= -O0 -g -std=gnu23
 CPPFLAGS ?=
 LDFLAGS ?= 
 LIBS ?=
@@ -26,6 +26,7 @@ LIBS ?=
 #add my flags
 CFLAGS := $(CFLAGS) -ffreestanding -Wall -Wextra -pedantic -Wconversion -Wcast-align -Wcast-qual \
 		 -Wredundant-decls -Wsign-conversion -Wswitch-default -Wundef -Wfloat-equal -Werror -fPIC
+CPPFLAGS := $(CPPFLAGS) -D__is_libtty -isystem ../include 
 CPPFLAGS := $(CPPFLAGS) -D__is_libtty -isystem ../include 
 LDFLAGS := $(LDFLAGS) -nostdlib  -Wl,-Map,output.map
 
@@ -41,14 +42,17 @@ FREEOBJS= $(OBJDIR)/gdt.o\
 $(OBJDIR)/getselectortext.o \
 $(OBJDIR)/ports.o \
 $(OBJDIR)/multiboot.o \
-$(OBJDIR)/paging.o \
+$(OBJDIR)/pmm.o \
+$(OBJDIR)/vmm.o \
 $(OBJDIR)/time.o \
-$(OBJDIR)/heap.o \
+$(OBJDIR)/bitarray.o \
+$(OBJDIR)/registers.o \
+$(OBJDIR)/krnlcmdline.o \
+#$(OBJDIR)/heap.o \
 $(OBJDIR)/heaptree.o \
 $(OBJDIR)/slaballoc.o \
 $(OBJDIR)/pagealloctree.o \
-$(OBJDIR)/bitarray.o \
-$(OBJDIR)/registers.o \
+$(OBJDIR)/paging.o \
 
 HOSTEDOBJS = \
 
@@ -75,6 +79,12 @@ $(OBJDIR)/ports.o : $(SRCDIR)/ports.c
 $(OBJDIR)/multiboot.o : $(SRCDIR)/multiboot.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
+$(OBJDIR)/pmm.o : $(SRCDIR)/pmm.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+$(OBJDIR)/vmm.o : $(SRCDIR)/vmm.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
 $(OBJDIR)/paging.o : $(SRCDIR)/paging.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
@@ -99,6 +109,8 @@ $(OBJDIR)/bitarray.o : $(SRCDIR)/bitarray.c
 $(OBJDIR)/registers.o : $(SRCDIR)/registers.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
+$(OBJDIR)/krnlcmdline.o : $(SRCDIR)/krnlcmdline.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 clean:
 	rm -f $(DESTDIR)/*.a
 	rm -f $(OBJDIR)/*.d 

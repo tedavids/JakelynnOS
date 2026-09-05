@@ -30,7 +30,7 @@ struct multiboot_bios_dev_info_t {
 struct multiboot_mem_map_entry_t {
     uint64_t    baseaddr;       // base address
     uint64_t    endaddr;        // end of the block
-    uint32_t    type;           // type of memory 1 = available, 3 = ACPI, 5 is defective
+    uint32_t    memtype;           // type of memory 1 = available, 3 = ACPI, 5 is defective
                                 // type 1 is read/write, type 5 should be set to unavailable
                                 // all others should be read only
     uint32_t    reserved;
@@ -102,7 +102,7 @@ struct multiboot_info_t {
     struct multiboot_bios_dev_info_t    bootdev;
     struct multiboot_mem_map_info_t     mmap;
     struct multiboot_framebuffer_info_t framebuf;
-    struct multiboot_ACPI_RSDP_t        ACPI_RSDP
+    struct multiboot_ACPI_RSDP_t        ACPI_RSDP;
 };
 
 

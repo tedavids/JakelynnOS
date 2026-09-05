@@ -4,18 +4,13 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <tty.h>
 #include <stdio.h>
 #include <string.h>
 
-static bool print(const char* string, size_t length) 
+bool print(const char* string) 
 {
-    const unsigned char* bytes = (const unsigned char*) string;
-    
-    for (size_t i = 0; i < length; i++) 
-        if (putchar(bytes[i]) == EOF)
-            return false;
-
-    return true;
+    return ttyWriteString(string);
 } // static bool print(const char* data, size_t length)
 
 int printf(const char* restrict format, ...) 
@@ -27,7 +22,8 @@ int printf(const char* restrict format, ...)
 
     snprintfint(buffer, sizeof(buffer), format, &parameters);
     size_t written =  strlen(buffer);
-    print(buffer, written);
+    if (!ttyWriteString(buffer)) return 0;
+
 
     return (int) written;
 

@@ -1,0 +1,521 @@
+// Physical Memory Manager
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <multiboot.h>
+
+#include <pmm.h>
+
+// constants
+#define PHYSICAL_MEMORY_EXISTS      0b00000001
+#define PHYSICAL_MEMORY_AVAILABLE   0b00000010
+#define PHYSICAL_MEMORY_IN_USE      0b00000100
+
+
+#define RECURSIVE_PAGE_DIRECTORY_ADDR 0xFFFFF000
+#define PAGE_TABLE_START              0xFFC00000
+
+#define ADDRESS_MASK                0xFFFFF000
+// externals
+extern uint32_t PAGETABLE000[1024];
+extern uint32_t PAGETABLEBF8[1024];
+extern uint32_t PAGETABLEBFC[1024];
+extern uint32_t PAGETABLEC00[1024];
+
+// This shows the status of every page in memory
+struct PhysMemInfo_t     PhysMemInfo;
+uint8_t  PhysMemoryPageStatus[0x100000];
+
+static uint32_t firstPhysOffset;
+static uint32_t lastPhysOffset;
+static uint32_t lastAllocOffset;
+
+// our recursive page directory
+uint32_t * const    recurPageDirectory = (uint32_t *) RECURSIVE_PAGE_DIRECTORY_ADDR;
+uint32_t * const    PAGETABLE = (uint32_t *) PAGE_TABLE_START;
+
+// get page from address
+uint32_t AddressToPage(uint32_t address) {
+    return (address >> 12);
+}
+
+// get the physical address from the page directory and page table entry
+// Returns:     The page table entry
+bool physAddrFromPdePdt(uint32_t *address,uint32_t pde, uint32_t pte) {
+    // validate parameters
+    if ((!address) || (pde > 1023) || (pte > 1023)) {
+        address = nullptr;
+        return false;
+    }
+
+    volatile uint32_t *pt = (volatile uint32_t *)(PAGE_TABLE_START + (pde << 12));
+
+    *address = pt[pte] & ADDRESS_MASK;
+
+    return true;
+}
+
+// get PDE physical address
+// Parameters:  address -- a pointer to where you want the physical address
+//              pde -- the index in the page direcory
+// Returns:     true if there is a phsical address, false otherwise
+//              if true address is the physical address, otherwise address is a null pointer
+bool physAddrOfPDE(uint32_t *address, pde_t pde) {
+    // validate parameters
+    if ((!address) || (pde > 1023)) {
+        address = nullptr;
+        return false;
+    }
+    // do we have a page directory entry
+    if (!page_directory[pde]) {
+        address = nullptr;
+        return false;
+    }
+
+    // we have an address
+    *address = page_directory[pde] & ADDRESS_MASK;
+
+    return true;
+}
+
+// get the page directory entry from a virtual address
+pde_t getPDEFromAddress(uint32_t virtaddr) {
+    return virtaddr >> 22;
+}
+
+// get the page table enry from a virtual address
+pde_t getPTEFromAddress(uint32_t virtaddr) {
+    return (virtaddr >> 12) & 0x3FF;
+}
+
+// get the virtual address of a particular page table
+// Parameters:  pde -- The page directory entry of the table
+// Returns:     The virtual address of the page table
+extern uint32_t getPageTableVirtAddress(pde_t pde, pte_t pte) {
+        // check paramters
+    if (pde > 1023) return 0xFFFFFFFF;
+    if (pte > 1023) return 0xFFFFFFFF;
+
+    uint32_t virtaddr = ((uint32_t) PAGETABLE + (4096 * pde) + (pte * sizeof(uint32_t)));
+
+    return virtaddr;
+}
+
+// get the page table physical address from a PDE,PDT
+// Parameters:  pde - The page direcory entry
+//              pte - The table table entry
+// returns:     The physical address of the combination, or 0xFFFFFFF if failed
+
+extern uint32_t getPageTablePhysAddress(uint32_t pde, uint32_t pte) {
+    // check paramters
+    if (pde > 1023) return 0xFFFFFFFF;
+    if (pte > 1023) return 0xFFFFFFFF;
+
+    uint32_t *virtaddr = (uint32_t *)(PAGETABLE + (4096 * pde) + (pte * sizeof(uint32_t)));
+    
+    // check if we have a valid virtual address 
+    if (!(*virtaddr)) return 0xFFFFFFFF;
+
+    return *virtaddr;
+}
+
+
+// get the virtual address of a particular page table
+// Parameters:  pde -- The page directory entry of the table
+// Returns:     The virtual address of the page table
+uint32_t getDirectoryTableVirtAddress(pde_t pde) {
+    return (uint32_t)(PAGE_TABLE_START + (pde << 12));
+}
+
+
+// invalidate an individual page
+// Parameters:  virtaddress -- The virtual address of the page to be invalidated
+// Returns:     None
+extern void     invalidatePage(void * virtaddress) {
+    __asm__ volatile (
+        "invlpg (%0)"
+        :
+        : "r"(virtaddress)
+        : "memory"
+    );
+}
+
+// get if physical page exists
+bool doesPhysMemExist(uint32_t phypageoffset) {
+    return (PhysMemoryPageStatus[phypageoffset] & PHYSICAL_MEMORY_EXISTS);
+}
+
+
+// get if physical page is avaiable (not reserved)
+bool isPhysMemAvail(uint32_t phypageoffset) {
+    // if page doesn't exists, it isn't available
+    if (!doesPhysMemExist(phypageoffset)) return false;
+    // if it does exist is it available
+    return (PhysMemoryPageStatus[phypageoffset] & PHYSICAL_MEMORY_AVAILABLE);
+}
+
+
+// get if physical page is reserved
+bool isPhysMemReserved(uint32_t phypageoffset) {
+    return (doesPhysMemExist(phypageoffset) & !isPhysMemAvail(phypageoffset));
+}
+
+// get if physical page is allocated in a page table
+bool isPhysMemInUse(uint32_t phypageoffset) {
+    // check if it exists
+    if (!doesPhysMemExist(phypageoffset)) return false;
+    // if it does exist is it in a page table
+    return (PhysMemoryPageStatus[phypageoffset] & PHYSICAL_MEMORY_IN_USE);
+}
+
+// set physical memory allocated
+
+// Parameters:  phypageoffset - the offset to the physical page 
+
+// Returns:     true if page is set to allocated
+//              fallse if the physical memory does not exist, or is already allocated
+bool setPhysMemAlloc(uint32_t phypageoffset) {
+    // if page doesn't exists, it isn't available
+    if (!doesPhysMemExist(phypageoffset)) return false;
+    // if it is already allocated it we don't have to set it allocated
+    if (isPhysMemInUse(phypageoffset)) return false;
+
+    // set the memory as available
+    PhysMemoryPageStatus[phypageoffset] |= PHYSICAL_MEMORY_IN_USE;
+    // we have one more used
+    PhysMemInfo.PagesInUse++;
+
+    return true;
+}
+
+// set Physical Memory Not Allocated
+// Parameters:  phypageoffset - the offset to the physical page 
+
+// Returns:     true if page is set to allocated
+//              fallse if the physical memory does not exist, or is already allocated
+bool setPhysMemNotInUse(uint32_t phypageoffset) {
+    // if page doesn't exists, it isn't available
+    if (!doesPhysMemExist(phypageoffset)) return false;
+    // if it is already not allocated it we don't have to set it deallocated
+    if (!isPhysMemInUse(phypageoffset)) return false;
+
+    // set the memory as available
+    PhysMemoryPageStatus[phypageoffset] |= (uint8_t)~(PHYSICAL_MEMORY_IN_USE);
+    // we have one less used
+    PhysMemInfo.PagesInUse--;
+
+    return true;
+}
+
+
+// get next free page offset
+
+// parameters:  *found -- did we find a page (handles page 0)
+
+// returns the offset to the next free page, assuming found it true otherwise undefined
+
+uint32_t getNextPhysFreePage(bool *found) {
+    // while we aren't at the end of the list and the memory already allocated
+    while ((lastAllocOffset < lastPhysOffset) && !isPhysMemInUse(lastAllocOffset)) {
+        lastAllocOffset++;
+    }
+    // did we get to the end of the list?
+    if (lastAllocOffset != lastPhysOffset) {
+    } else {
+        // we are here because we had a free offset
+        if (found) *found = true;
+        // so return the address
+        return lastAllocOffset << 12;
+    }
+    // check the table again because we ran off the end
+    // while we aren't at the end of the list and the memory already allocated
+    lastAllocOffset = firstPhysOffset;
+    while ((lastAllocOffset < lastPhysOffset) && !isPhysMemInUse(lastAllocOffset)) {
+        lastAllocOffset++;
+    }
+    if (lastAllocOffset == lastPhysOffset) {
+        if (found) *found = false;
+        return 0;
+    }
+    
+    // we have a free page
+    if (found) *found = true;
+    // so return the address
+    return lastAllocOffset << 12;
+}
+
+// allocate a page
+
+// Parameters:  *physpage Address of page allocated
+
+// Returns:     *physpage - Address of phyical page allocated, or nullptr if not  allocated
+//              true if page allocated, false otherwise
+bool allocPhysMem(uint32_t *physpage) {
+    if (!physpage) return false;
+
+    bool found = false;
+
+    // get next free page
+    *physpage = getNextPhysFreePage(&found);
+
+    // if found, mark as allocated
+    if (found) {
+        found = setPhysMemAlloc(*physpage);
+    }
+
+    // make it an address
+    *physpage <<= 12;
+
+    return found;
+}
+
+// Deallocate a page
+bool DeAllocPhysMem(uint32_t physpage) {
+    // make it an offset
+    physpage >>= 12;
+    // does page exist
+    if (!doesPhysMemExist(physpage)) return false;
+    // is it allocated
+    if (!isPhysMemInUse(physpage)) return false;
+    // it is in use
+    PhysMemoryPageStatus[physpage] ^= PHYSICAL_MEMORY_IN_USE;
+    return true;
+}
+
+// allocate a physical page more than once
+// note:  It is up to the caller to make sure it isn't deallocated prematurely
+extern bool multiAllocPhysMem(uint32_t physpage) {
+    if (!isPhysMemInUse(physpage)) return false;
+
+    return true;
+}
+
+// initialize the page directory
+// this must happen after we do multiboot, because it clears page 0
+
+// currently it just clears PDE 0, except for the first entry 
+// where the SYSCALL table will live
+
+bool initPageDirectory() {
+
+    // clear legacy Upper Memory Area from mapping (0xA00000-0xF0000)
+    for (uint32_t i = 160; i < 240; i++) {
+        PAGETABLE[i] = 0;
+    }
+
+    // clear for page table 1022
+    uint32_t * start = (uint32_t *) (PAGE_TABLE_START + (1022*0x1000));
+    for (uint32_t i = 992; i < 1000; i++) {
+        start[i] = 0;
+    }
+
+    FlushTLB();
+
+    return true;
+}
+
+// get the multiboot memory type
+uint32_t getMemoryType(uint32_t type) {
+    switch(type) {
+        // available
+        case 1: return 1;
+        // reserved
+        case 2: return 2;
+        // ACPI reclaimable
+        case 3: return 1;
+        // defective
+        case 4: return 4;
+        // unknown
+        default: return type;
+    }
+}
+
+
+// process the multiboot memory map
+
+// Parameters:  mmap -- the multiboot memory map
+// Returns:     true if successful
+
+bool processMultibootMemMap(const struct multiboot_mem_map_info_t * const mmap) {
+    // initialize physical memory
+    memset(PhysMemoryPageStatus,0,sizeof(PhysMemoryPageStatus));
+
+    // make sure we have a memory map
+    if (mmap->count == 0) return false;
+    
+    
+    // set head  of our circular available buffer
+    uint32_t firstavail = 0;
+    while (firstavail < mmap->count) {
+        if (mmap->region[firstavail].memtype == 1) break;
+    }
+    // no available memory?
+    if (firstavail > mmap->count) {
+        print("No available memory!\n\r");
+        return false;
+    }
+
+    // get our first available memory
+    firstPhysOffset = (uint32_t) (mmap->region[firstavail].baseaddr >> 12);
+
+    // last physical offset
+    lastPhysOffset = (uint32_t) (mmap->region[mmap->count - 1].endaddr >> 12);
+
+    // get last available physical memory 
+    uint32_t lastavail = mmap->count - 1;
+    while (lastavail > 0) {
+        // check if region is available
+        if (mmap->region[lastavail].memtype == 1) break;
+        lastavail--;
+    }
+
+    // type of memory
+    // last available physical offset
+    lastAllocOffset = (uint32_t)(mmap->region[lastavail].endaddr >> 12);
+    // process multiboot memory map
+    for (uint32_t i = 0; i < mmap->count; i++) {
+        // get starting and ending pages
+        uint32_t startaddr;
+        uint32_t endaddr;
+        switch (mmap->region[i].memtype) {
+            // available
+            case 1: 
+                startaddr = PAGE_ALIGN_UP((uint32_t)mmap->region[i].baseaddr);
+                endaddr = (uint32_t)mmap->region[i].endaddr;
+                break;
+            // reserved
+            case 2:
+                startaddr = PAGE_ALIGN_DOWN((uint32_t)mmap->region[i].baseaddr);
+                endaddr = (uint32_t)mmap->region[i].endaddr;
+                break;
+            // ACPI reclaimable (treat as type 1)
+            case 3:
+                startaddr = PAGE_ALIGN_UP((uint32_t)mmap->region[i].baseaddr);
+                endaddr = (uint32_t)mmap->region[i].endaddr;
+                break;
+            // defective (skip)
+            case 4:
+                startaddr = 9999;
+                endaddr = 0;
+                break;
+            // we don't know (skip it)
+            default:
+                startaddr = 9999;
+                endaddr = 0;
+                break;
+        }
+
+        for (uint32_t page = AddressToPage(startaddr);
+            page <= AddressToPage(endaddr); page++) {
+            // get page offset
+            PhysMemoryPageStatus[page] |= PHYSICAL_MEMORY_EXISTS;   // memory exists
+            PhysMemInfo.PagesExist++;
+
+            // is it available to us or is it reserved, if it is reserved, it is also read only
+            switch (getMemoryType(mmap->region[i].memtype)) {
+                // available
+                case 1:
+                    PhysMemoryPageStatus[page] |= PHYSICAL_MEMORY_AVAILABLE;
+                    PhysMemInfo.PagesAvail++;
+                    lastAllocOffset = page;
+                    break;
+                // reserved
+                case 2:
+                    PhysMemInfo.PagesReserved++;
+                    break;
+                // ignore others
+                default:
+                    break;
+            }
+        }
+    }
+
+    return true;
+}
+
+// set in use memory flags
+
+// Parameters:  None
+// Returns:     the number of errors it found (should be 0)
+
+uint32_t setInUsePhysicalMemory() {
+    // no parameters to check
+
+    uint32_t numerrors = 0;
+
+    for (pde_t pde = 0; pde < 1024; pde++) {
+        // if the page directory has an entry we can check the page tables
+        if (page_directory[pde]) {
+            // get start address of page table
+            // 1024*sizeof(uint32_t) is the size of a page table
+            uint32_t temp = PAGE_TABLE_START + (pde * 0x1000);
+            uint32_t * ptaddr = (uint32_t *) temp;
+            for (pte_t pte = 0; pte < 1024; pte++) {
+                if (ptaddr[pte]) {
+                    uint32_t phypage = AddressToPage(ptaddr[pte] & 0xFFFFF000);
+                    // set inuse if it exists
+                    if (doesPhysMemExist(phypage)) {
+                        PhysMemoryPageStatus[phypage] |= PHYSICAL_MEMORY_IN_USE;
+                    } else {
+                        printf("Page 0x%xl, pde=%ul, pte=%ul, in use but does not exist\n\r",phypage, pde, pte);
+                        numerrors++;
+                    }
+                } 
+            } 
+        }
+    }
+
+    return numerrors;
+}
+
+// note this is hardcoded, we will change at some point
+
+bool processVideoMemory() {
+    // video memory shows as reserved (not available)
+    // i is the offset (not the address)
+    for (uint32_t i = 0xA8; i <= 0xBF; i++) {
+        PhysMemoryPageStatus[i] |= PHYSICAL_MEMORY_EXISTS;
+    }
+
+    return true;
+}
+// This must be called AFTER the multiboot information is collected
+// Initialize memory management
+
+// Parameters: None
+
+// Returns:     true if memory management structures are successfully initialized,
+//              false otherwise
+
+bool initPMM(const struct multiboot_memory_info_t * const meminfo,  const struct multiboot_mem_map_info_t * const mmap) {
+    // check parameters
+    if (!meminfo) return false;
+    if (!mmap) return false;
+
+    bool rtncde = true;
+
+    // initialize memory information
+    PhysMemInfo.PagesAvail = 0;
+    PhysMemInfo.PagesInUse = 0;
+    PhysMemInfo.PagesExist = 0;
+    PhysMemInfo.PagesReserved = 0;
+
+
+
+    // set up the inital memory map
+    rtncde &= processMultibootMemMap(mmap);
+
+    // set up video memory (not reported in the multiboot info)
+    rtncde &= processVideoMemory();
+
+    // get inuse memory
+    uint32_t errors = setInUsePhysicalMemory();
+    if (errors) {
+        printf("%ul errors found in setInUsePhysicalMemory()\n\r", errors);
+        //rtncde = false;
+    }
+
+    return rtncde;
+}

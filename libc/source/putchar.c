@@ -9,7 +9,7 @@
 int putchar(int ic) {
 #if !defined(__is_libstdio) 
     char c = (char) ic;
-    terminal_write(&c, sizeof(c));
+    ttyWrite(&c, sizeof(c));
 #else
     // todo implement stdio and write system call
 #endif

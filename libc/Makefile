@@ -17,8 +17,8 @@ AS=i686-elf-gcc
 LD=i686-elf-gcc
 
 #initail flags
-#CFLAGS ?= -O2 -ggdb
-CFLAGS ?= -g
+#CFLAGS ?= -O2 -ggdb -std=c23
+CFLAGS ?= -g -std=c23
 CPPFLAGS ?=
 LDFLAGS ?= 
 LIBS ?=
@@ -40,8 +40,9 @@ FREEOBJS=$(OBJDIR)/memory.o \
 $(OBJDIR)/strlen.o \
 $(OBJDIR)/abort.o \
 $(OBJDIR)/strncpy.o \
-$(OBJDIR)/strntok.o \
+$(OBJDIR)/strtokbuf.o \
 $(OBJDIR)/strncmp.o \
+$(OBJDIR)/strto.o \
 $(OBJDIR)/toHex.o \
 $(OBJDIR)/toBase10.o \
 $(OBJDIR)/trim.o \
@@ -80,7 +81,10 @@ $(OBJDIR)/strncpy.o : $(SRCDIR)/strncpy.c
 $(OBJDIR)/strncmp.o : $(SRCDIR)/strncmp.c 
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
-$(OBJDIR)/strntok.o : $(SRCDIR)/strntok.c 
+$(OBJDIR)/strtokbuf.o : $(SRCDIR)/strtokbuf.c 
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+$(OBJDIR)/strto.o : $(SRCDIR)/strto.c 
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/abort.o : $(SRCDIR)/abort.c 

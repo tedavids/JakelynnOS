@@ -153,7 +153,7 @@ void buildMMAP(const struct tag_mmap_t* const mmap) {
         // memory is 0 based, length is 1 based so subtract 1
         multiboot_info.mmap.region[i].endaddr = mmap->entry[i].baseaddr + 
             mmap->entry[i].len - 1;
-        multiboot_info.mmap.region[i].type = mmap->entry[i].type;
+        multiboot_info.mmap.region[i].memtype = mmap->entry[i].type;
     }
 }
 
@@ -173,6 +173,7 @@ bool loadMultibootInfo() {
             case CMDLINE_TAG: {
                 struct tag_string_t *s = (struct tag_string_t *) tag;
                 strncpy(multiboot_info.cmdline,s->string, sizeof(multiboot_info.cmdline));
+
                 break;
                 }
             case BOOT_LOADER_TAG: {
@@ -185,12 +186,14 @@ bool loadMultibootInfo() {
                 multiboot_info.modules.start = s->mod_start;
                 multiboot_info.modules.end = s->mod_end;
                 strncpy(multiboot_info.modules.string, s->string, sizeof(multiboot_info.modules.string));
+
                 break;
             }
             case MEMORY_SIZES_TAG: {
                 struct tag_mem_info_t * meminfo = (struct tag_mem_info_t*) tag;
                 multiboot_info.meminfo.lower = meminfo->lower * 1024;
                 multiboot_info.meminfo.upper = meminfo->upper * 1024;
+
                 break;
                 }
             case BIOS_BOOT_DEV_TAG: {
@@ -198,10 +201,12 @@ bool loadMultibootInfo() {
                 multiboot_info.bootdev.device = dev->biosdev;
                 multiboot_info.bootdev.partition = dev->partition;
                 multiboot_info.bootdev.subpartition = dev->subpartition;
-                 break;
+
+                break;
                 }
             case MMAP_TAG: {
                 buildMMAP((struct tag_mmap_t*) tag);
+
                 break;
                 }
             case FRAMEBUFFER_TAG: {
@@ -244,6 +249,7 @@ bool loadMultibootInfo() {
                     multiboot_info.ACPI_RSDP.Revision = rsdp->Revision;
                     multiboot_info.ACPI_RSDP.Address = rsdp->RsdtAddress;
                 }
+
                 break;
             }
             case ACPI_NEW_RDSP_TAG: {
@@ -259,6 +265,8 @@ bool loadMultibootInfo() {
                 multiboot_info.ACPI_RSDP.Address = rsdp->XsdtAddress;
                 multiboot_info.ACPI_RSDP.Length = rsdp->Length;
                 multiboot_info.ACPI_RSDP.ExtendedChecksum = rsdp->ExtendedChecksum;
+    
+               break;
             }
             default:
                 break;

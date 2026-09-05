@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// remove this when you dont want to test
+#include <tests.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <tty.h>
@@ -23,16 +25,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <kernel>
-#include <paging.h>
+#include <krnlcmdline.h>
+#include <pmm.h>
+#include <vmm.h>
+//#include <paging.h>
 #include <idt.h>
 #include <time.h>
 #include <interrupt.h>
 #include <multiboot.h>
 #include <ps2kbd.h>
 #include <docmd.h>
+#include <heap.h>
 
 
 #include "kernel.h"
+
+// delete these eventualy
+extern uint32_t PAGETABLE000[1024];
+extern uint32_t PAGETABLEBF8[1024];
+extern uint32_t PAGETABLEBFC[1024];
+extern uint32_t PAGETABLEC00[1024];
 
 // process a command
 
@@ -83,21 +95,10 @@ char *getCommand(char* restrict buffer, size_t size) {
 
 void kernel_main() {
 
-    initPageDirectory();
-    
    // init display 
-    if (!enableVGACursor(VGA_CURSOR_BLOCK)) {
-        printf("Warning unable to create cursor\n\r");
-    }
-
-    // put cursor at 1
-    struct cursor_pos_t cursorpos = {1,1};
-    if (!set80x25cursorPos(&cursorpos)) {
-        printf("Warning unable to set cursor positon\n\r");
-    }
-
-    if (!terminal_initialize()) {
+    if (!ttyInit()) {
         printf("Problem initializing terminal\r\n");
+        abort();
     }
 
     //  print name they can read while I do other stuff
@@ -135,7 +136,7 @@ void kernel_main() {
     printf("Success\n\r");
     
 
-       // Multiboot info
+    // Multiboot info
     printf("Loading multiboot info...");
     if (!loadMultibootInfo()) {
         printf("Failed\n\r");
@@ -143,7 +144,73 @@ void kernel_main() {
     }
     printf("Success\n\r");
 
+    // processing command line
+    printf("Processing kernel command line...");
+    if (!processCommandLine(multiboot_info.cmdline)) {
+        printf("Failed\n\r");
+        abort();
+    }
+    printf("Success\n\r");
 
+    // setting up final page directory and tables
+    printf("Setting up page tables...");
+    if (!initPageDirectory()) {
+        printf("Failed\n\r");
+        abort();
+    }
+    printf("Success\n\r");
+
+#if defined(INCLUDE_TESTS) && defined(PMM_TESTS)
+    print("Starting physical memory manager tests...");
+    if (!pmmtests()) {
+        printf("Failed\n\r");
+    } else {
+        printf("Successful\n\r");
+    }
+#endif
+
+    // initialize memory managers
+    printf("Initializing physical memory manager...");
+    if (!initPMM(&multiboot_info.meminfo, &multiboot_info.mmap)) {
+        printf("Failed\n\r");
+        abort();
+    }
+    printf("Success\n\r");
+
+#if defined(INCLUDE_TESTS) && defined(VMM_TESTS)
+    print("Starting virtual memory manager tests...");
+    if (!vmmtests()) {
+        printf("Failed\n\r");
+    } else {
+        printf("Successful\n\r");
+    }
+#endif
+
+    printf("Initializing virtual memory manager...");
+    if (!initVMM()) {
+        printf("Failed\n\r");
+        abort();
+    }
+    printf("Success\n\r");   
+/*
+    // initialize paging
+    printf("Initializing paging...");
+    if (!initPaging()) {
+        printf("Failed\n\r");
+        abort();
+    }
+    printf("Success\n\r");
+
+
+    // initialize heap
+    printf("Initializing heap...");
+    if (!initHeap()) {
+        printf("Failed\n\r");
+        abort();
+    } else {
+        printf("Success\n\r");
+    }
+*/
     // initialize keyboard
     printf("Initializing keyboard...");
     if (initKbd()) {
@@ -152,8 +219,6 @@ void kernel_main() {
         printf("Failed\n\4");
         abort();
     }
-
-
         // command loop
     char command[256];
 

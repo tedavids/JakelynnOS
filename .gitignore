@@ -16,3 +16,6 @@ output.map
 
 #IDE
 .vscode/
+
+#stuff I'm not using yet
+ignore/
