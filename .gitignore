@@ -4,6 +4,7 @@
 *.o 
 *.d 
 *.iso
+*.kernel
 
 # libraries
 *.a 

@@ -5,10 +5,10 @@ This OS will be x86 32 bit based, I may try a x86_64 one later on
 
 I'm hoping to correct many of these in this project.  Major improvements in design will include:
 
-* Create my memory map FIRST
-* Create my page directory and page table entries up front
-* Move the kernel to the higher half immediately
-* Create my GDT in the .data section so it is preloaded
+* Create my memory map FIRST - Done
+* Create my page directory and page table entries up front - Done
+* Move the kernel to the higher half immediately - Done
+* Create my GDT in the .data section so it is preloaded - Done
 
 
 ## Features
@@ -21,12 +21,14 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 ## TODOs
 
 * Get test scripts written
-  * libc
+  * libc - not started
   * libkrnl
-  * libintr
+    * Pysical Memory Manager Tests -- in progress
+    * Virtual Memory Manager Tests -- in Progress
+  * libintr - not started
   * libcmd
-* Get physical memory manager working
-* Get Virtual Memory Manager working
+* Get physical memory manager working -- Pending tests
+* Get Virtual Memory Manager working -- pending tests
 * Get all the frame buffer info from MULTIBOOT2
 * Print all multiboot info
 * Set up Heap
@@ -45,9 +47,10 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 ## Credits
 
 * OSDev contributors
- Octocontrabass, sebihepp, and nullplan for their help getting to the Higher Half
+* Reddit users
+  * Octocontrabass, sebihepp, and nullplan for their help getting to the Higher Half
 
 * https://www.tutorialspoint.com/data_structures_algorithms/avl_tree_algorithm.htm for a self balancing binary tree
 
 ## License 
-Disributed under GPL3 
+Distributed under GPL3 
