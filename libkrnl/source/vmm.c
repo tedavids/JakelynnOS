@@ -202,7 +202,8 @@ bool clearVirtMemReadOnly(uint32_t virtaddr) {
 
 // get if virtual page is part of the kernel
 bool isVirtKrnlMem(uint32_t virtaddr) {
-    return (VirtMemoryPageStatus[AddressToPage(virtaddr)] & VIRT_MEMORY_KERNEL);
+    bool rtncde = VirtMemoryPageStatus[AddressToPage(virtaddr)] & VIRT_MEMORY_KERNEL;
+    return rtncde;
 }
 
 // set it as kernel memory
@@ -263,31 +264,31 @@ bool clearVirtMemShared(uint32_t virtaddr) {
 // Parameters:  None
 // returns:     the next available kernel page, or zero if out of memory
 uint32_t getNextAvailKernelPage() {
-    for (uint32_t page = nextAvailKernelPage; page > lowAvailKernelPage; page--) {
-        // see if page is in use
-        if (!isVirtMemInUse(page << 12)) {
-            // move to next page
-            nextAvailKernelPage--;
-            if (nextAvailKernelPage == lowAvailKernelPage) {
-                nextAvailKernelPage = highAvailKernelPage;
-            }
-            return page;
+    // while we aren't at the end of the list and the memory already allocated
+    while ((nextAvailKernelPage < highAvailKernelPage)) {
+        // the functions expect an address
+        auto addr = nextAvailKernelPage << 12;
+        if (!isVirtMemInUse(addr) && !isVirtMemReadOnly(addr) && 
+            !isVirtMemShared(addr) && isVirtKrnlMem(addr)) {
+            return nextAvailKernelPage++;
         }
+        nextAvailKernelPage++;
     }
-    // we ran into the beginning of the buffer, try from the back
-    for (uint32_t page = lowAvailKernelPage; page > highAvailKernelPage; page--) {
-        // see if page is in use
-        if (!isVirtMemInUse(page << 12)) {
-            // move to next page
-            nextAvailKernelPage--;
-            if (nextAvailKernelPage == lowAvailKernelPage) {
-                nextAvailKernelPage = highAvailKernelPage;
-            }
-            return page;
-        }        
+ 
+    // check the table again because we ran off the end
+    // while we aren't at the end of the list and the memory already allocated
+    nextAvailKernelPage = lowAvailKernelPage;
+    while ((nextAvailKernelPage < highAvailKernelPage) && !isVirtMemReadOnly(nextAvailKernelPage)) {
+        auto addr = nextAvailKernelPage << 12;
+        if (!isVirtMemInUse(addr) && !isVirtMemReadOnly(addr) && 
+            !isVirtMemShared(addr) && isVirtKrnlMem(addr)) {
+            return nextAvailKernelPage++;
+        }
+        nextAvailKernelPage++;
     }
-    // if we get here we are out of memory
-    return 0;
+    // out of memory
+    return 0xFFFFFFFF;
+ 
 }
 
 // allocate kernel virtual memory
@@ -653,7 +654,7 @@ bool initVMM() {
     // set available kernel pages
     highAvailKernelPage = 0xffbe7;
     lowAvailKernelPage = (uint32_t) &_heap_start >> 12;
-    nextAvailKernelPage = highAvailKernelPage;
+    nextAvailKernelPage = lowAvailKernelPage;
 
     bool rtncde = true;
 

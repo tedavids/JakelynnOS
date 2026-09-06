@@ -262,16 +262,16 @@ bool vmmtests() {
 
     // get next available kernel page
     auto page = getNextAvailKernelPage();
-    if (page != 0xffbe7) {
+    if (page != 0xc031d) {
         printf("getNextAvailKernelPage failed, returned 0x%xl, should be 0x%xl\n\r",
-            page, (uint32_t) 0xffbe7);
+            page, (uint32_t) 0xc031d);
         rtncde = false;
     }
-    // this should be the next lower page
+    // this should be the next page
     page = getNextAvailKernelPage();
-    if (page != 0xffbe6) {
+    if (page != 0xc031e) {
         printf("getNextAvailKernelPage failed, returned 0x%xl, should be 0x%xl\n\r",
-            page, (uint32_t) 0xffbe6);
+            page, (uint32_t) 0xc031e);
         rtncde = false;
     }
     

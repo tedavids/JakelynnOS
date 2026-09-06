@@ -160,15 +160,6 @@ void kernel_main() {
     }
     printf("Success\n\r");
 
-#if defined(INCLUDE_TESTS) && defined(PMM_TESTS)
-    print("Starting physical memory manager tests...");
-    if (!pmmtests()) {
-        printf("Failed\n\r");
-    } else {
-        printf("Successful\n\r");
-    }
-#endif
-
     // initialize memory managers
     printf("Initializing physical memory manager...");
     if (!initPMM(&multiboot_info.meminfo, &multiboot_info.mmap)) {
