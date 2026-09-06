@@ -79,14 +79,14 @@ extern uint32_t getPageTablePhysAddress(uint32_t pde, uint32_t pte);
 extern uint32_t getPageTableVirtAddress(pde_t pde, pte_t pte);
 
 // get if physical page exists
-extern bool doesPhysMemExist(uint32_t phypageoffset);
+extern bool physMemExists(uint32_t phypageoffset);
 // get if physical memory page is available (not reserved)
-extern bool isPhysMemAvail(uint32_t phypageoffset);
+extern bool physMemAvail(uint32_t phypageoffset);
 // get if physical memory page is reserved
-extern bool isPhysMemReserved(uint32_t phypageoffset);
+extern bool physMemReserved(uint32_t phypageoffset);
 // get if physical memory is in a page table
 // also returns false if physical memory doesn't exist
-extern bool isPhysMemInUse(uint32_t phypageoffset);
+extern bool physMemInUse(uint32_t phypageoffset);
 
 
 // allocate a physical memory page
@@ -106,7 +106,7 @@ extern bool multiAllocPhysMem(uint32_t physpage);
 
 // Returns:     true if removed, false if not (it was multiple allocated, or doesnt' exist)
 
-extern bool DeAllocPhysMem(uint32_t physpage);
+extern bool deAllocPhysMem(uint32_t physpage);
 
 // Initialize the page directory
 // this must happen after we do multiboot, because it clears page 0

@@ -4,7 +4,7 @@
 *.o 
 *.d 
 *.iso
-*.kernel
+
 
 # libraries
 *.a 
@@ -17,6 +17,8 @@ output.map
 
 #IDE
 .vscode/
+
+# the disk image
 
 #stuff I'm not using yet
 ignore/

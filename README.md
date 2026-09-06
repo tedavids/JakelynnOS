@@ -14,7 +14,7 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 ## Features
 
 * Uses GRUB2 and multiboot 2 standard
-* Written in GNU assembly, C, and C++ I will use the C23 standard
+* Written in GNU assembly and C.  I will use the C23 standard
 * I have all warnings set on and have warnings set as errors, I do this to ensure I don't make assumptsion
 * In general I will try to have my includes mirror Linux, to make it easier for others to understand
 
@@ -23,7 +23,7 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 * Get test scripts written
   * libc - not started
   * libkrnl
-    * Pysical Memory Manager Tests -- in progress
+    * Pysical Memory Manager Tests -- Complete
     * Virtual Memory Manager Tests -- in Progress
   * libintr - not started
   * libcmd

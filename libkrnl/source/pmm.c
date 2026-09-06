@@ -118,7 +118,7 @@ extern uint32_t getPageTablePhysAddress(uint32_t pde, uint32_t pte) {
     // check if we have a valid virtual address 
     if (!(*virtaddr)) return 0xFFFFFFFF;
 
-    return *virtaddr;
+    return *virtaddr & 0xFFFFF000;
 }
 
 
@@ -143,29 +143,29 @@ extern void     invalidatePage(void * virtaddress) {
 }
 
 // get if physical page exists
-bool doesPhysMemExist(uint32_t phypageoffset) {
+bool physMemExists(uint32_t phypageoffset) {
     return (PhysMemoryPageStatus[phypageoffset] & PHYSICAL_MEMORY_EXISTS);
 }
 
 
 // get if physical page is avaiable (not reserved)
-bool isPhysMemAvail(uint32_t phypageoffset) {
+bool physMemAvail(uint32_t phypageoffset) {
     // if page doesn't exists, it isn't available
-    if (!doesPhysMemExist(phypageoffset)) return false;
+    if (!physMemExists(phypageoffset)) return false;
     // if it does exist is it available
     return (PhysMemoryPageStatus[phypageoffset] & PHYSICAL_MEMORY_AVAILABLE);
 }
 
 
 // get if physical page is reserved
-bool isPhysMemReserved(uint32_t phypageoffset) {
-    return (doesPhysMemExist(phypageoffset) & !isPhysMemAvail(phypageoffset));
+bool physMemReserved(uint32_t phypageoffset) {
+    return (physMemExists(phypageoffset) & !physMemAvail(phypageoffset));
 }
 
 // get if physical page is allocated in a page table
-bool isPhysMemInUse(uint32_t phypageoffset) {
+bool physMemInUse(uint32_t phypageoffset) {
     // check if it exists
-    if (!doesPhysMemExist(phypageoffset)) return false;
+    if (!physMemExists(phypageoffset)) return false;
     // if it does exist is it in a page table
     return (PhysMemoryPageStatus[phypageoffset] & PHYSICAL_MEMORY_IN_USE);
 }
@@ -178,9 +178,9 @@ bool isPhysMemInUse(uint32_t phypageoffset) {
 //              fallse if the physical memory does not exist, or is already allocated
 bool setPhysMemAlloc(uint32_t phypageoffset) {
     // if page doesn't exists, it isn't available
-    if (!doesPhysMemExist(phypageoffset)) return false;
+    if (!physMemExists(phypageoffset)) return false;
     // if it is already allocated it we don't have to set it allocated
-    if (isPhysMemInUse(phypageoffset)) return false;
+    if (physMemInUse(phypageoffset)) return false;
 
     // set the memory as available
     PhysMemoryPageStatus[phypageoffset] |= PHYSICAL_MEMORY_IN_USE;
@@ -195,14 +195,14 @@ bool setPhysMemAlloc(uint32_t phypageoffset) {
 
 // Returns:     true if page is set to allocated
 //              fallse if the physical memory does not exist, or is already allocated
-bool setPhysMemNotInUse(uint32_t phypageoffset) {
+bool clearPhysMemInUse(uint32_t phypageoffset) {
     // if page doesn't exists, it isn't available
-    if (!doesPhysMemExist(phypageoffset)) return false;
+    if (!physMemExists(phypageoffset)) return false;
     // if it is already not allocated it we don't have to set it deallocated
-    if (!isPhysMemInUse(phypageoffset)) return false;
+    if (!physMemInUse(phypageoffset)) return false;
 
     // set the memory as available
-    PhysMemoryPageStatus[phypageoffset] |= (uint8_t)~(PHYSICAL_MEMORY_IN_USE);
+    PhysMemoryPageStatus[phypageoffset] &= (uint8_t)~(PHYSICAL_MEMORY_IN_USE);
     // we have one less used
     PhysMemInfo.PagesInUse--;
 
@@ -212,82 +212,79 @@ bool setPhysMemNotInUse(uint32_t phypageoffset) {
 
 // get next free page offset
 
-// parameters:  *found -- did we find a page (handles page 0)
+// parameters:  none
 
-// returns the offset to the next free page, assuming found it true otherwise undefined
+// returns the offset to the next free page, or 0xFFFFFFFF if out of memory
 
-uint32_t getNextPhysFreePage(bool *found) {
+uint32_t getNextPhysFreePage() {
     // while we aren't at the end of the list and the memory already allocated
-    while ((lastAllocOffset < lastPhysOffset) && !isPhysMemInUse(lastAllocOffset)) {
+    while ((lastAllocOffset < lastPhysOffset)) {
+        if (physMemAvail(lastAllocOffset) && !physMemInUse(lastAllocOffset)) {
+            return lastAllocOffset++;
+        }
         lastAllocOffset++;
     }
-    // did we get to the end of the list?
-    if (lastAllocOffset != lastPhysOffset) {
-    } else {
-        // we are here because we had a free offset
-        if (found) *found = true;
-        // so return the address
-        return lastAllocOffset << 12;
-    }
+ 
     // check the table again because we ran off the end
     // while we aren't at the end of the list and the memory already allocated
     lastAllocOffset = firstPhysOffset;
-    while ((lastAllocOffset < lastPhysOffset) && !isPhysMemInUse(lastAllocOffset)) {
+    while ((lastAllocOffset < lastPhysOffset) && !physMemInUse(lastAllocOffset)) {
+        if (physMemAvail(lastAllocOffset) && !physMemInUse(lastAllocOffset)) {
+            return lastAllocOffset++;
+        }
         lastAllocOffset++;
     }
-    if (lastAllocOffset == lastPhysOffset) {
-        if (found) *found = false;
-        return 0;
-    }
-    
-    // we have a free page
-    if (found) *found = true;
-    // so return the address
-    return lastAllocOffset << 12;
+    // out of memory
+    return 0xFFFFFFFF;
+ 
 }
 
 // allocate a page
 
 // Parameters:  *physpage Address of page allocated
 
-// Returns:     *physpage - Address of phyical page allocated, or nullptr if not  allocated
-//              true if page allocated, false otherwise
+// Returns:     *physpage - address of phyical page allocated, or nullptr if not  allocated
+//              the address of the physical page allocated, or 0xFFFFFFFF if it failed
 bool allocPhysMem(uint32_t *physpage) {
     if (!physpage) return false;
 
-    bool found = false;
-
     // get next free page
-    *physpage = getNextPhysFreePage(&found);
+    *physpage = getNextPhysFreePage();
 
+    // is it a valid page
+    if (*physpage == 0xFFFFFFFF) {
+        return nullptr;
+    }
+
+    bool rtncde = false;
     // if found, mark as allocated
-    if (found) {
-        found = setPhysMemAlloc(*physpage);
+    if (*physpage) {
+        rtncde = setPhysMemAlloc(*physpage);
     }
 
     // make it an address
     *physpage <<= 12;
 
-    return found;
+    return rtncde;
 }
 
 // Deallocate a page
-bool DeAllocPhysMem(uint32_t physpage) {
+bool deAllocPhysMem(uint32_t physpage) {
     // make it an offset
     physpage >>= 12;
     // does page exist
-    if (!doesPhysMemExist(physpage)) return false;
+    if (!physMemExists(physpage)) return false;
     // is it allocated
-    if (!isPhysMemInUse(physpage)) return false;
+    if (!physMemInUse(physpage)) return false;
     // it is in use
-    PhysMemoryPageStatus[physpage] ^= PHYSICAL_MEMORY_IN_USE;
+    clearPhysMemInUse(physpage);
     return true;
 }
 
 // allocate a physical page more than once
 // note:  It is up to the caller to make sure it isn't deallocated prematurely
 extern bool multiAllocPhysMem(uint32_t physpage) {
-    if (!isPhysMemInUse(physpage)) return false;
+    if (!clearPhysMemInUse(physpage)) return false;
 
     return true;
 }
@@ -456,10 +453,9 @@ uint32_t setInUsePhysicalMemory() {
                 if (ptaddr[pte]) {
                     uint32_t phypage = AddressToPage(ptaddr[pte] & 0xFFFFF000);
                     // set inuse if it exists
-                    if (doesPhysMemExist(phypage)) {
+                    if (physMemExists(phypage)) {
                         PhysMemoryPageStatus[phypage] |= PHYSICAL_MEMORY_IN_USE;
                     } else {
-                        printf("Page 0x%xl, pde=%ul, pte=%ul, in use but does not exist\n\r",phypage, pde, pte);
                         numerrors++;
                     }
                 } 

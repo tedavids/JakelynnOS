@@ -471,7 +471,7 @@ bool deallocVirtMem(uint32_t virtaddr, bool invaliatepage) {
     if (!pt[pte]) return false;
 
     // deallocate the memory
-    bool deallocated = DeAllocPhysMem(pt[pte] & 0xFFFFF000);
+    bool deallocated = deAllocPhysMem(pt[pte] & 0xFFFFF000);
 
     if (!deallocated) return false;
 
