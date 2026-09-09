@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <kbd.h>
 #include <kernel>
 #include <krnlcmdline.h>
 #include <pmm.h>
@@ -39,53 +40,6 @@
 
 
 #include "kernel.h"
-
-// delete these eventualy
-extern uint32_t PAGETABLE000[1024];
-extern uint32_t PAGETABLEBF8[1024];
-extern uint32_t PAGETABLEBFC[1024];
-extern uint32_t PAGETABLEC00[1024];
-
-// process a command
-
-char *getCommand(char* restrict buffer, size_t size) {
-    // check parameters
-    if (!buffer) return nullptr;
-    if (!size) return nullptr;
-
-    uint16_t key = 0;
-    size_t cmdidx = 0;
-    char ascii = 0;
-
-    // wait for a key (if necessary)
-    while (kbdBufferEmpty());
-
-    // do until we get to the end of the command (enter) or ESC is pressed
-    // minus 2 because we need space for eh null
-    while ((((char)key != '\n') && ((char)key != KBD_KEY_ESC)) && (cmdidx < (size -2))) {
-        key = kbdGetKey();
-        ascii = (char) key;
-        // if its valid ascii (ignore control chars kinda)) TODO: make more bulletproof
-        if ((ascii < 127) && (ascii > 0)) {
-            printf("%c",ascii);
-            buffer[cmdidx++] = ascii;
-        }
-
-        // do we wait for the next key
-        if ((ascii != '\n') && (ascii != KBD_KEY_ESC) && (cmdidx < (size -2))) {
-            while (kbdBufferEmpty());
-        }
-    }
-    // terminate
-    if (ascii != KBD_KEY_ESC) {
-        buffer[cmdidx] = '\0';
-    } else {
-        buffer[0] = (char) key;
-        buffer[1] = '\0';
-    }
-
-    return buffer;
-}
 
 // The start of the kernel
 
@@ -223,16 +177,17 @@ void kernel_main() {
     char command[256];
 
     int rtncde = 0;
-    while (command[0] != KBD_KEY_ESC) {
+    while (strncmp(sizeof(command), command,"exit") !=0 ) {
         printf("Command> ");
-        if (getCommand(command, sizeof(command))) {
+        if (kbdInput(command,sizeof(command),true)) {
             printf("\r");
             rtncde = doCommand(command);
             printf("Return code: %iw\n\r", rtncde);
         }
 
     }
-    printf("Kernel end");
+
+    print("Kernel end");
 
     // this is the end of the kernel
 

@@ -39,6 +39,7 @@ LIBTTY_CPPFLAGS := $(LIBTTY_CPPFLAGS) $(ARCH_CPPFLAGS)
 FREEOBJS= \
 $(OBJDIR)/ps2kbd.o \
 $(OBJDIR)/kbd_handler.o \
+$(OBJDIR)/kbd.o \
 
 HOSTEDOBJS = \
 
@@ -61,6 +62,8 @@ $(OBJDIR)/ps2kbd.o : $(SRCDIR)/ps2kbd.c
 $(OBJDIR)/kbd_handler.o : $(SRCDIR)/kbd_handler.S
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
+$(OBJDIR)/kbd.o : $(SRCDIR)/kbd.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:
 	rm -f $(DESTDIR)/*.a

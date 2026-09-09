@@ -10,6 +10,7 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 * Move the kernel to the higher half immediately - Done
 * Create my GDT in the .data section so it is preloaded - Done
 
+Full disclosure:  While I was a professional developer on the IBMi(AS/400) I have never been formally trained in C\C++ or x86 assembler
 
 ## Features
 
@@ -23,12 +24,11 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 * Get test scripts written
   * libc - not started
   * libkrnl
-    * Virtual Memory Manager Tests -- Complete
     * Multiboot tests
   * libintr - not started
   * libcmd
 * Get Virtual Memory Manager working -- Complete
-* Get backspace working on keyboard input routine
+* Get backspace working on keyboard input routine, plus move to kbd.c -- Complete
 * Get all the frame buffer info from MULTIBOOT2
 * Print all multiboot info
 * Set up Heap
