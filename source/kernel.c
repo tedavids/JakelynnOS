@@ -1,6 +1,6 @@
 // this will be my kernel
 
-/* Copyright (C) <year> <name of author>
+/* Copyright (C) 2026 Tom Davidson
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
