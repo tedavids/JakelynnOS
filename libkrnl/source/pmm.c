@@ -15,7 +15,6 @@
 
 
 #define RECURSIVE_PAGE_DIRECTORY_ADDR 0xFFFFF000
-#define PAGE_TABLE_START              0xFFC00000
 
 #define ADDRESS_MASK                0xFFFFF000
 // externals
@@ -34,7 +33,7 @@ static uint32_t lastAllocOffset;
 
 // our recursive page directory
 uint32_t * const    recurPageDirectory = (uint32_t *) RECURSIVE_PAGE_DIRECTORY_ADDR;
-uint32_t * const    PAGETABLE = (uint32_t *) PAGE_TABLE_START;
+
 
 // get page from address
 uint32_t AddressToPage(uint32_t address) {
@@ -80,67 +79,7 @@ bool physAddrOfPDE(uint32_t *address, pde_t pde) {
     return true;
 }
 
-// get the page directory entry from a virtual address
-pde_t getPDEFromAddress(uint32_t virtaddr) {
-    return virtaddr >> 22;
-}
 
-// get the page table enry from a virtual address
-pde_t getPTEFromAddress(uint32_t virtaddr) {
-    return (virtaddr >> 12) & 0x3FF;
-}
-
-// get the virtual address of a particular page table
-// Parameters:  pde -- The page directory entry of the table
-// Returns:     The virtual address of the page table
-extern uint32_t getPageTableVirtAddress(pde_t pde, pte_t pte) {
-        // check paramters
-    if (pde > 1023) return 0xFFFFFFFF;
-    if (pte > 1023) return 0xFFFFFFFF;
-
-    uint32_t virtaddr = ((uint32_t) PAGETABLE + (4096 * pde) + (pte * sizeof(uint32_t)));
-
-    return virtaddr;
-}
-
-// get the page table physical address from a PDE,PDT
-// Parameters:  pde - The page direcory entry
-//              pte - The table table entry
-// returns:     The physical address of the combination, or 0xFFFFFFF if failed
-
-extern uint32_t getPageTablePhysAddress(uint32_t pde, uint32_t pte) {
-    // check paramters
-    if (pde > 1023) return 0xFFFFFFFF;
-    if (pte > 1023) return 0xFFFFFFFF;
-
-    uint32_t *virtaddr = (uint32_t *)(PAGETABLE + (4096 * pde) + (pte * sizeof(uint32_t)));
-    
-    // check if we have a valid virtual address 
-    if (!(*virtaddr)) return 0xFFFFFFFF;
-
-    return *virtaddr & 0xFFFFF000;
-}
-
-
-// get the virtual address of a particular page table
-// Parameters:  pde -- The page directory entry of the table
-// Returns:     The virtual address of the page table
-uint32_t getDirectoryTableVirtAddress(pde_t pde) {
-    return (uint32_t)(PAGE_TABLE_START + (pde << 12));
-}
-
-
-// invalidate an individual page
-// Parameters:  virtaddress -- The virtual address of the page to be invalidated
-// Returns:     None
-extern void     invalidatePage(void * virtaddress) {
-    __asm__ volatile (
-        "invlpg (%0)"
-        :
-        : "r"(virtaddress)
-        : "memory"
-    );
-}
 
 // get if physical page exists
 bool physMemExists(uint32_t phypageoffset) {
@@ -228,7 +167,7 @@ uint32_t getNextPhysFreePage() {
     // check the table again because we ran off the end
     // while we aren't at the end of the list and the memory already allocated
     lastAllocOffset = firstPhysOffset;
-    while ((lastAllocOffset < lastPhysOffset) && !physMemInUse(lastAllocOffset)) {
+    while ((lastAllocOffset < lastPhysOffset)) {
         if (physMemAvail(lastAllocOffset) && !physMemInUse(lastAllocOffset)) {
             return lastAllocOffset++;
         }
@@ -289,29 +228,7 @@ extern bool multiAllocPhysMem(uint32_t physpage) {
     return true;
 }
 
-// initialize the page directory
-// this must happen after we do multiboot, because it clears page 0
 
-// currently it just clears PDE 0, except for the first entry 
-// where the SYSCALL table will live
-
-bool initPageDirectory() {
-
-    // clear legacy Upper Memory Area from mapping (0xA00000-0xF0000)
-    for (uint32_t i = 160; i < 240; i++) {
-        PAGETABLE[i] = 0;
-    }
-
-    // clear for page table 1022
-    uint32_t * start = (uint32_t *) (PAGE_TABLE_START + (1022*0x1000));
-    for (uint32_t i = 992; i < 1000; i++) {
-        start[i] = 0;
-    }
-
-    FlushTLB();
-
-    return true;
-}
 
 // get the multiboot memory type
 uint32_t getMemoryType(uint32_t type) {
@@ -370,7 +287,7 @@ bool processMultibootMemMap(const struct multiboot_mem_map_info_t * const mmap) 
 
     // type of memory
     // last available physical offset
-    lastAllocOffset = (uint32_t)(mmap->region[lastavail].endaddr >> 12);
+    //lastPhysOffset = (uint32_t)(mmap->region[lastavail].endaddr >> 12);
     // process multiboot memory map
     for (uint32_t i = 0; i < mmap->count; i++) {
         // get starting and ending pages
@@ -414,6 +331,7 @@ bool processMultibootMemMap(const struct multiboot_mem_map_info_t * const mmap) 
             switch (getMemoryType(mmap->region[i].memtype)) {
                 // available
                 case 1:
+                case 3:
                     PhysMemoryPageStatus[page] |= PHYSICAL_MEMORY_AVAILABLE;
                     PhysMemInfo.PagesAvail++;
                     lastAllocOffset = page;
@@ -428,7 +346,7 @@ bool processMultibootMemMap(const struct multiboot_mem_map_info_t * const mmap) 
             }
         }
     }
-
+    lastAllocOffset = firstPhysOffset;
     return true;
 }
 

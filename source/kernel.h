@@ -8,9 +8,9 @@
 
 #define KERNEL_VERSION      "0.000"
 
-extern const char*              OSNAME;
-extern const char*              OSVERSION;
-extern const char*              OSDATE;
+extern const char*              BOOTNAME;
+extern const char*              BOOTVERSION;
+extern const char*              BOOTDATE;
 extern uint32_t                 BOOTSTATUS;             // status of boot tasks
 
 #endif

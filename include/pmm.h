@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <pagetable.h>
 
 #include <multiboot.h>
 
@@ -23,22 +24,14 @@ struct PhysMemInfo_t {
     uint32_t    PagesReserved;
 };
 
-typedef uint32_t pte_t;                 // page table entry
-typedef uint32_t pde_t;                 // page directory entry
-typedef uint32_t page_table_t [1024];    // individual page table
+
 
 
 // external variables
 extern uint32_t                 page_directory[1024];
 extern struct PhysMemInfo_t     PhysMemInfo;
-extern uint32_t * const         PAGETABLE;
-// flush the transaction lookaside buffer
-extern void     FlushTLB();
 
-// invalidate an individual page
-// Parameters:  virtaddress -- The virtual address of the page to be invalidated
-// Returns:     None
-extern void     invalidatePage(void * virtaddress);
+
 
 
 // get the physical address of the pde/pdt entry
@@ -59,24 +52,6 @@ bool physAddrOfPDE(uint32_t *address, pde_t pde);
 
 // get page from address
 uint32_t AddressToPage(uint32_t address);
-
-// get the page directory entry from a virtual address
-pde_t getPDEFromAddress(uint32_t virtaddr);
-
-// get the page table enry from a virtual address
-pde_t getPTEFromAddress(uint32_t virtaddr);
-
-// get the page table physical address from a PDE,PDT
-// Parameters:  pde - The page direcory entry
-//              pte - The table table entry
-// returns:     The physical address of the combination, or 0xFFFFFFF if failed
-
-extern uint32_t getPageTablePhysAddress(uint32_t pde, uint32_t pte);
-
-// get the virtual address of a particular page table
-// Parameters:  pde -- The page directory entry of the table
-// Returns:     The virtual address of the page table
-extern uint32_t getPageTableVirtAddress(pde_t pde, pte_t pte);
 
 // get if physical page exists
 extern bool physMemExists(uint32_t phypageoffset);
@@ -108,14 +83,7 @@ extern bool multiAllocPhysMem(uint32_t physpage);
 
 extern bool deAllocPhysMem(uint32_t physpage);
 
-// Initialize the page directory
-// this must happen after we do multiboot, because it clears page 0
 
-// Parameters:  None
-
-// Returns:     true if successful, false otherwise
-
-extern bool initPageDirectory();
 
 // process the multiboot memory map
 

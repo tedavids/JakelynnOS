@@ -315,8 +315,6 @@ setIDT:
     ret 
 
 	# Reload crc3 to force a TLB flush so the changes to take effect.
-.global FlushTLB
-.type FlushTLB, @function
 FlushTLB:
 	push %ecx
 	movl %cr3, %ecx
@@ -333,17 +331,17 @@ FlushTLB:
 .section .rodata
 .align 4096
 
-.global OSNAME
-.type OSNAME, @object
-OSNAME:	.asciz	"JakelynOS"
+.global BOOTNAME
+.type BOOTNAME, @object
+BOOTNAME:	.asciz	"JakelynOS Boot"
 
-.global OSVERSION
-.type OSVERSION, @object
-OSVERSION:	.asciz	"0.0.0"
+.global BOOTVERSION
+.type BOOTVERSION, @object
+BOOTVERSION:	.asciz	"0.0.1"
 
-.global OSDATE
-.type OSDATE, @object
-OSDATE:		.asciz	"2026-09-04"
+.global BOOTDATE
+.type BOOTDATE, @object
+BOOTDATE:		.asciz	"2026-09-08"
 
 .global LINKADDRESS
 .type LINKADDRESS, @object

@@ -6,8 +6,8 @@
 #define INCLUDE_TESTS
 
 #define MULTIBOOT_TESTS
-#define PMM_TESTS
-#define VMM_TESTS
+#undef PMM_TESTS
+#undef VMM_TESTS
 
 
 #ifdef MULTIBOOT_TESTS

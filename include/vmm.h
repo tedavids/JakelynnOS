@@ -18,14 +18,13 @@ struct VirtMemInfo_t {
     uint32_t    SwappedPages;
 };
 
+typedef struct {
+    uint32_t    lowpage;
+    uint32_t    highpage;
+} address_range_t;
+
 // External variables
 extern struct VirtMemInfo_t VirtMemInfo;
-
-// external for testing only
-// get the next available kernel address
-// Parameters:  None
-// returns:     the next available kernel page, or zero if out of memory
-uint32_t getNextAvailKernelPage();
 
 // external functions
 // get virtual address from a page directory enty and page table entry
@@ -86,33 +85,28 @@ extern bool setVirtMemShared(uint32_t virtaddr);
 // clear shared bit
 extern bool clearVirtMemShared(uint32_t virtaddr);
 
-// alloc kernel virtual memory anonomously
+// getAvailKerenlPageRange
+// Parameters:  numpages -- the number of pages you want to allocate
+// Returns:     address_range_t containing the range,
+//                  if both entries are 0xFFFFFFFF, an derror occurred
+address_range_t getAvailKernelPageRange(uint32_t numpages);
+
+// alloc kernel virtual memory
 // Parameters:  invalidatepage -- invalidate the page
-// Returns:     true if successful, false otherise
-extern uint32_t * allocAnonKrnlMem(bool invalidatepage);
+// Returns:     address if successful, nullptr if failed
+extern uint32_t * allocVirtKrnlMem(bool invalidatepage);
 
-// dealloc any unused anonomous kernel memory
-// Parameters:  None
-// Returns:     true if successful, false otherwise
-extern bool deallocAnonKrnlMem();
-
-// allocate kernel virtual memory
+// allocate specific kernel virtual memory
 // Parameters:  virtaddr -- the address you wish allocated
 //              invalidatepage -- do you want to invalidate the page
 // Returns:     the address of the allocation, or nullptr if unsuccessful
-extern uint32_t* allocVirtKrnlMem(uint32_t virtaddr, bool invalidatepage);
+extern uint32_t* allocVirtKrnlMemSpecific(uint32_t virtaddr, bool invalidatepage);
 
 // deallocate kernel virtual memory
 // Parameters:  virtaddr -- the address you wish allocated
 //              invalidatepage -- do you want to invalidate the page
 // Returns:     true if succesful, false otherwise
 extern bool deallocVirtKrnlMem(uint32_t virtaddr, bool invalidatepage);
-
-// allocate virtual memory
-// Parameters:  virtaddr -- the address you wish allocated
-//              invalidatepage -- do you want to invalidate the page
-// Returns:     the address of the allocation, or nullptr if unsuccessful
-extern uint32_t * allocVirtMem(uint32_t virtaddr, bool invalidatepage);
 
 // deallocate virtual memory
 // Parameters:  virtaddr -- the address you with to deallocate
@@ -137,18 +131,7 @@ extern uint32_t* allocVirtMemBlock(uint32_t startaddr, uint32_t endaddr, uint32_
 // returns:     true if successful, false otherwise
 extern bool deallocVirtMemBlock(uint32_t startaddr, uint32_t endaddr, uint32_t *lastdealloc);
 
-// allocate virtual memory
-// Parameters:  virtaddr -- the address you wish multi allocated, it must already have been allocated by allocVirtMem
-// Returns:     The address of the shared memory, or nullptr if it fails
-extern uint32_t* allocSharedVirtMem(uint32_t addrtoshare, uint32_t virtaddr);
 
-// deallocate virtual memory
-// Parameters:  virtaddr -- the address you with to deallocate
-//                          it must have been allocated by allocSharedVirtMem, unless it was the first allocation
-// Returns:     true if successful, false otherwise
-
-// Note: The user is responsible to keep track of the number of times it's been shared
-extern bool deallocSharedVirtMem(uint32_t virtaddr, bool lastaddr);
 
 // initialize Virtual Memory Manager
 bool initVMM();

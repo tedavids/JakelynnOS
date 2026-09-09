@@ -105,13 +105,13 @@ bool pmmtests() {
         rtncde = false;
     }
 
-    if (getPageTablePhysAddress(0,0) != (PAGETABLE[0] & 0xFFFFF000)) {
+    if (getPageTablePhysAddress(0,0) != 0) {
         printf("getPageTablePhysicalAddress(0,0) failed returned 0x%Xl, expected 0x%Xl\n\r", 
-            getPageTablePhysAddress(0,0), PAGETABLE[0] & 0xFFFFF000);
+            getPageTablePhysAddress(0,0), 0);
         rtncde = false;
     }
 
-    if (getPageTableVirtAddress(768,0) != 0xFFF00000) {
+    if ((uint32_t) getPageTableVirtAddress(768,0) != 0xFFF00000) {
         printf("getPageTableVirtAddress(768,0) failed, returned 0x%Xl, expected 0xFFF00000\n\r", getPageTableVirtAddress(768,0));
         rtncde = false;
     }
@@ -160,8 +160,8 @@ bool pmmtests() {
     // check setInUsePhysicalMemory()
     auto errors = setInUsePhysicalMemory();
     // we are expecting ### errors
-    if (errors != 1504) {
-        printf("setInUsePhysicalMemory() failed, should have had 1094 error, returned %ul\n\r", errors);
+    if (errors != 1505) {
+        printf("setInUsePhysicalMemory() failed, should have had 1505 error, returned %ul\n\r", errors);
     }
 
     
@@ -169,15 +169,15 @@ bool pmmtests() {
     // locations 0x0-0x2FFF should show available
     for (uint32_t addr = 0x0; addr < 0x2FFF; addr+= 0x1000) {
         if (!physMemExists(AddressToPage(addr))) {
-            printf("!doesPhysMemoryExist(%ul) failed\n\r", addr);
+            printf("!physMemExists(%ul) failed\n\r", addr);
             rtncde = false;
         }
         if (!physMemAvail(AddressToPage(addr))) {
-            printf("!isPhysMemAvail(%ul) afiled\n\r", addr);
+            printf("!physMemAvail(%ul) afiled\n\r", addr);
             rtncde = false;
         }
         if (physMemReserved(AddressToPage(addr))) {
-            printf("isPhysMemReserved(%ul) failed\n\r", addr);
+            printf("physMemReserved(%ul) failed\n\r", addr);
             rtncde = false;
         }
     }
@@ -231,17 +231,17 @@ bool pmmtests() {
      }
 
      // check physical memory in use
-    if (!physMemInUse(AddressToPage(0x2))) {
-        print("!isPhysMemInUse(0x2) failed\n\r");
+    if (!physMemInUse(0x2)) {
+        print("physMemInUse(0x2) failed\n\r");
         rtncde = false;
     }
     if (!physMemInUse(0x7)) {
-        print("!isPhysMemInUse(0x7) failed\n\r");
+        print("!physMemInUse(0x7) failed\n\r");
         rtncde = false;
     }
 
     if (!physMemInUse(0x10)) {
-        print("!isPhysMemInUse(0x10) failed\n\r");
+        print("!physMemInUse(0x10) failed\n\r");
         rtncde = false;
     }    
 

@@ -52,6 +52,7 @@ uint32_t lowAvailKernelPage;
 uint32_t highAvailKernelPage;
 uint32_t nextAvailKernelPage;
 
+
 // get virtual address from a page directory enty and page table entry
 
 // get virtual address from a page directory enty and page table entry
@@ -113,9 +114,7 @@ bool clearVirtMemSwappedOut(uint32_t virtaddr) {
 
 // get if virtual memory is swappable
 bool isVirtMemSwappable(uint32_t virtaddr) {
-    // if its not in use it can't be swappable
-    if (!isVirtMemInUse(virtaddr)) return false;
-
+ 
     bool temp = !(VirtMemoryPageStatus[AddressToPage(virtaddr)] & VIRT_MEMORY_NOT_SWAPPABLE);
 
     return temp;
@@ -165,7 +164,7 @@ bool setVirtMemInUse(uint32_t virtaddr) {
 // clear virtual memory in use flag
 bool clearVirtMemInUse(uint32_t virtaddr) {
     // if memory is not in use we have an issue
-    if (!isVirtMemInUse(AddressToPage(virtaddr))) return false;
+    if (!isVirtMemInUse(virtaddr)) return false;
 
     VirtMemoryPageStatus[AddressToPage(virtaddr)] ^= VIRT_MEMORY_IN_USE;
     return true;
@@ -202,7 +201,7 @@ bool clearVirtMemReadOnly(uint32_t virtaddr) {
 
 // get if virtual page is part of the kernel
 bool isVirtKrnlMem(uint32_t virtaddr) {
-    bool rtncde = VirtMemoryPageStatus[AddressToPage(virtaddr)] & VIRT_MEMORY_KERNEL;
+    bool rtncde = (VirtMemoryPageStatus[AddressToPage(virtaddr)] & VIRT_MEMORY_KERNEL) > 0;
     return rtncde;
 }
 
@@ -224,7 +223,6 @@ bool clearVirtKrnlMem(uint32_t virtaddr) {
     VirtMemoryPageStatus[AddressToPage(virtaddr)] ^= VIRT_MEMORY_KERNEL;
     return true;
 }
-
 
 // get if virtual memory is shared
 // Parameters:  virtaddr -- the address to check
@@ -260,7 +258,7 @@ bool clearVirtMemShared(uint32_t virtaddr) {
     return true;
 }
 
-// get the next available kernel address
+// get the next available kernel page
 // Parameters:  None
 // returns:     the next available kernel page, or zero if out of memory
 uint32_t getNextAvailKernelPage() {
@@ -291,18 +289,161 @@ uint32_t getNextAvailKernelPage() {
  
 }
 
+// get the next available kernel page, without moving the pointer
+// Parameters:  start - the first page to start at
+// returns:     the next available kernel page, or zero if out of memory
+uint32_t searchNextAvailKernelPage(uint32_t start) {
+    auto nextPage = start;
+    // while we aren't at the end of the list and the memory already allocated
+    while ((nextPage < highAvailKernelPage)) {
+        // the functions expect an address
+        auto addr = nextPage << 12;
+        if (!isVirtMemInUse(addr) && !isVirtMemReadOnly(addr) && 
+            !isVirtMemShared(addr) && isVirtKrnlMem(addr)) {
+            return nextPage;
+        }
+        nextPage++;
+    }
+ 
+    // check the table again because we ran off the end
+    // while we aren't at the end of the list and the memory already allocated
+    nextPage = lowAvailKernelPage;
+    while ((nextPage < highAvailKernelPage) && !isVirtMemReadOnly(nextAvailKernelPage)) {
+        auto addr = nextPage << 12;
+        if (!isVirtMemInUse(addr) && !isVirtMemReadOnly(addr) && 
+            !isVirtMemShared(addr) && isVirtKrnlMem(addr)) {
+            return nextAvailKernelPage++;
+        }
+        nextPage++;
+    }
+    // out of memory
+    return 0xFFFFFFFF;
+}
+
+// getAvailKerenlPageRange
+// Parameters:  numpages -- the number of pages you want to allocate
+// Returns:     address_range_t containing the range,
+//                  if both entries are 0xFFFFFFFF, an derror occurred
+address_range_t getAvailKernelPageRange(uint32_t numpages) {
+    if (numpages < 2) return (address_range_t) {0xFFFFFFFF,0xFFFFFFFF};
+
+    address_range_t range = (address_range_t) {0xFFFFFFFF,0xFFFFFFFF};
+
+    range.lowpage = searchNextAvailKernelPage(nextAvailKernelPage);
+    // We have our starting point
+    auto start = range.lowpage;
+    // was it in error
+    if (range.lowpage == 0xFFFFFFFF) start = lowAvailKernelPage;
+
+    uint32_t count = 1;
+    while (count < numpages) {
+        // get the next 
+        auto nextPage = searchNextAvailKernelPage(start + 1);
+        // check if we have anerror
+        if (nextPage == 0xFFFFFFFF) break;
+        // see if we have the next page
+        if (nextPage != (start + 1)) {
+            // nope, set new start and reset count
+            count = 1;          // we are going to increment it
+            start = nextPage;
+        } else {
+            // do we have enough
+            // its numpages -1 because count doen't account for the first one
+            if (count == (numpages - 1)) {
+                range.highpage = nextPage;
+                return range;
+            }
+        }
+        start++;
+        count++;
+    }
+
+    // if we get here we ran off the end, start back at the beginning
+
+    start = searchNextAvailKernelPage(lowAvailKernelPage);
+    // we failed to get anything
+    if (start == 0xFFFFFFFF) return (address_range_t) {0xFFFFFFFF,0xFFFFFFFF};
+    count = 1;
+
+    while (count < numpages) {
+        // get the next 
+        auto nextPage = searchNextAvailKernelPage(start + 1);
+        // check if we have anerror
+        if (nextPage == 0xFFFFFFFF) return (address_range_t) {0xFFFFFFFF,0xFFFFFFFF};
+        // see if we have the next page
+        if (nextPage != (start + 1)) {
+            // nope, set new start and reset count
+            count = 1;          // we are going to increment it
+            start = nextPage;
+        } else {
+            // do we have enough
+            if (count == (numpages - 1)) {
+                range.highpage = nextPage;
+                return range;
+            }
+        }
+        count++;
+        start++;
+    }   
+    // if we get here we failed
+
+    return (address_range_t) {0xFFFFFFFF,0xFFFFFFFF};
+}
+
+// alloc virtual memory anonomously
+// Parameters:  invalidatepage -- invalidate the page
+// Returns:     a pointer to the address if successful, nullptr otherwise
+
+uint32_t* allocVirtKrnlMem(bool invalidatepage) {
+    // get next available kernel page
+    uint32_t page = getNextAvailKernelPage();
+    // are we out of memory?
+    if (!page) return nullptr;
+  
+    
+    // allocate the page
+    // make the page an address
+    uint32_t virtaddr = page << 12;
+    if (!allocVirtKrnlMemSpecific(virtaddr, invalidatepage)) {
+        return nullptr;
+    }
+
+    // set it to kernel memory
+    setVirtKrnlMem(virtaddr);
+
+    return (uint32_t *) virtaddr;
+    
+}
+
 // allocate kernel virtual memory
+//  the only checks it performs is that the memory is kernel memory and that it isn't already in use
 // Parameters:  virtaddr -- the address you wish allocated
 //              invalidatepage -- do you want to invalidate the page
 // Returns:     returns the allocated address if successful, nullptr otherwise
-uint32_t* allocVirtKrnlMem(uint32_t virtaddr, bool invalidatepage) {
+uint32_t* allocVirtKrnlMemSpecific(uint32_t virtaddr, bool invalidatepage) {
     // check memory isn't already in use
     if (isVirtMemInUse(virtaddr)) return nullptr;
 
-    // allocate the memory
-    if (!allocVirtMem(virtaddr,invalidatepage)) return nullptr;
+    // allocate the physical memory for the page
+    uint32_t physpage;
+    if (!allocPhysMem(&physpage)) return nullptr;
 
-    if (!setVirtKrnlMem(virtaddr)) printf("Error setting virtuall kernel memory: 0x%Xl\n\r",virtaddr);
+    // if it's already kernel memory just ignore the return code
+    setVirtKrnlMem(virtaddr);
+    // set it to in use
+    if (!setVirtMemInUse(virtaddr)) {
+        deAllocPhysMem(physpage);
+        return nullptr;
+    }
+    // put the page in the proper page table
+ 
+    if (!setPageTableEntry(virtaddr,physpage)) {
+        deAllocPhysMem(physpage);
+        return nullptr;
+    }
+
+    if (invalidatepage) 
+        invalidatePage((uint32_t *) virtaddr);
 
     return (uint32_t *) virtaddr;
 
@@ -320,9 +461,6 @@ bool deallocVirtKrnlMem(uint32_t virtaddr, bool invalidatepage) {
     // its ok to deallocate
     if (!deallocVirtMem(virtaddr,invalidatepage)) return false;
 
-    // clear the kernel flag
-    if (!clearVirtKrnlMem(virtaddr)) printf("Error clearing virtual kernel memory flag: 0x%Xl\n\r",virtaddr);
-
     return true;
 }
 
@@ -336,31 +474,8 @@ uint32_t *getPageTable(uint32_t pde) {
          case 768:
             return PAGETABLEC00;
         default:
-            return &PAGETABLE[pde];
+            return &(*PAGETABLE)[pde][0];
     }
-}
-
-// alloc virtual memory anonomously
-// Parameters:  invalidatepage -- invalidate the page
-// Returns:     a pointer to the address if successful, nullptr otherwise
-
-uint32_t* kallocAnonKrnlMem(bool invalidatepage) {
-    // get next available kernel page
-    uint32_t virtaddr = getNextAvailKernelPage();
-    // are we out of memory?
-    if (!virtaddr) return nullptr;
-  
-    
-    // allocate the page
-    if (!allocVirtMem(virtaddr, invalidatepage)) {
-        printf("Problem allocating anonomous memory\n\r");
-    }
-
-    // set it to kernel memory
-    setVirtKrnlMem(virtaddr);
-
-    return (uint32_t *) virtaddr;
-    
 }
 
 // allocate virtual memory
@@ -435,7 +550,8 @@ uint32_t* allocVirtMemBlock(uint32_t startaddr, uint32_t endaddr, uint32_t *last
     // all are addresses are not allocated
 
     for (uint32_t addr = startaddr; addr <= endaddr; addr += 0x1000) {
-        if (!allocVirtMem(addr, false)) {
+        auto allocaddr = allocVirtKrnlMemSpecific(addr, false);
+        if (!allocaddr) {
             // we had an issue in allocation
             FlushTLB();
             return nullptr;
@@ -454,35 +570,26 @@ uint32_t* allocVirtMemBlock(uint32_t startaddr, uint32_t endaddr, uint32_t *last
 //                          it must have been allocated by allocVirtMem
 //              invalidatepage -- do you want to invalidate the page
 // Returns:     true if successful, false otherwise
-bool deallocVirtMem(uint32_t virtaddr, bool invaliatepage) {
+bool deallocVirtMem(uint32_t virtaddr, bool invalidatepage) {
     // check that it is allocated
     if (!isVirtMemInUse(virtaddr)) return false;
 
-    // first see if we have a PDE for the address
     pde_t pde = getPDEFromAddress(virtaddr);
-
-    // no page directory entry, we can't deallocate
-    if (!page_directory[pde]) return false;
-
-    // get pointer to the page table 
-    uint32_t *pt = getPageTable(pde);
     pte_t pte = getPTEFromAddress(virtaddr);
 
-    // if the entry is 0 we have an issue
-    if (!pt[pte]) return false;
+    // make sure we have an entry
+    if (!getPageTablePhysAddress(pde,pte)) return false;
 
-    // deallocate the memory
-    bool deallocated = deAllocPhysMem(pt[pte] & 0xFFFFF000);
+     if (!clearVirtMemInUse(virtaddr)) return false;
 
-    if (!deallocated) return false;
+    // clear it
+    if (!clearPageTableEntry(virtaddr)) return false;
 
-    pt[pte] = 0;
 
-    if (!clearVirtMemInUse(virtaddr)) return false;
 
-    if (invaliatepage) invalidatePage(&virtaddr);
+    if (invalidatepage) invalidatePage(&virtaddr);
 
-    return deallocated;
+    return true;
 }
 
 // deallocates a block of virtual memory
@@ -518,100 +625,7 @@ bool deallocVirtMemBlock(uint32_t startaddr, uint32_t endaddr, uint32_t *lastdea
     return true;
 }
 
-// allocate virtual memory
-// Parameters:  virtaddr -- the address you wish multi allocated, it must already have been allocated by allocVirtMem
-// Returns:     a pointer to the address or nullptr if it fails
-uint32_t* allocSharedVirtMem(uint32_t addrtoshare, uint32_t virtaddr) {
-    // make sure address to share is in use
-    if (!isVirtMemInUse(addrtoshare)) return nullptr;
-    // make sure address we want is not in use
-    if (isVirtMemInUse(virtaddr)) return nullptr;
 
-    // we are ok
-
-    // first see if we have a PDE for the address
-    pde_t pde = getPDEFromAddress(addrtoshare);
-
-    // no page directory entry, we can't deallocate
-    if (!page_directory[pde]) return nullptr;
-
-    // get pointer to the page table 
-    uint32_t *pt = getPageTable(pde);
-    pte_t pte = getPTEFromAddress(addrtoshare);
-
-    uint32_t physpte = pt[pte];
-    // check if the page is in use
-    if (!physpte) return nullptr;
-
-    // now assign it to the new adderss
-    pde = getPDEFromAddress(virtaddr);
-
-    // if no pde, we have an issue
-    if (!page_directory[pde]) return nullptr;
-
-    //get the page table entry
-    pte = getPTEFromAddress(virtaddr);
-    // get the page table 
-    pt = getPageTable(pde);
-
-    // if it isn't zero we have an issue
-    if (pt[pte]) return false;
-
-    pt[pte] = physpte;
-
-    // mark new memory as shared
-    if (!setVirtMemShared(virtaddr)) return nullptr;
-
-    // mark shared, its ok if it is already shared so ignore the return
-    setVirtMemShared(addrtoshare);
-
-    invalidatePage(&virtaddr);
-
-    return (uint32_t *) virtaddr;
-
-}   
-
-// deallocate virtual memory
-// Parameters:  virtaddr -- the address you with to deallocate
-//                          it must have been allocated by allocSharedVirtMem, unless it was the first allocation
-// Returns:     true if successful, false otherwise
-
-// Note: The user is responsible to keep track of the number of times it's been shared
-bool deallocSharedVirtMem(uint32_t virtaddr, bool lastaddr) {
-    // make sure address is shared
-    if (!isVirtMemShared(virtaddr)) return false;
-
-    // get pde for address
-    pde_t pde = getPDEFromAddress(virtaddr);
-
-    // do I have a page table
-    if (!page_directory[pde]) return false;
-
-    // get the page table entry
-    pte_t pte = getPTEFromAddress(virtaddr);
-    uint32_t *pt = getPageTable(pde);
-
-    // if we don't have memory allocated it's an issue 
-    if (!pt[pte]) return false;
-
-    // clear the shared flag
-    if (!clearVirtMemShared(virtaddr)) return false;
-
-    // if this is the last one we need to deallocate it
-    if (lastaddr) {
-        if (!deallocVirtMem(virtaddr,true)) return false;
-        return true;
-    }
-
-    // mark the virtual address not in use
-    clearVirtMemInUse(virtaddr);
-    // clear the page table entry 
-    pt[pte] = 0;
-
-    invalidatePage(&virtaddr);
-
-    return true;
-}
 
 // set in use virtual memory
 
@@ -620,25 +634,20 @@ uint32_t setInUseVirtualMemory() {
 
     uint32_t numerrors = 0;
 
+    // walk the page table
     for (pde_t pde = 0; pde < 1024; pde++) {
-        // if the page directory has an entry we can check the page tables
-        if (page_directory[pde]) {
-            // get start address of page table
-            // 1024*sizeof(uint32_t) is the size of a page table
-            uint32_t temp = (uint32_t) (PAGETABLE) + (pde * 0x1000);
-            uint32_t * ptaddr = (uint32_t *) temp;
-            for (pte_t pte = 0; pte < 1024; pte++) {
-                if (ptaddr[pte]) {
-                    // if we get here the page table exists
-                    uint32_t virtaddr = virtAddrFromPdePdt(pde,pte);
-                    // if valid it should be in use, PMM should check to see if the physmem is ok
-                    if (virtaddr != 0xFFFFFFFF) {
-                        VirtMemoryPageStatus[AddressToPage(virtaddr)] |= VIRT_MEMORY_IN_USE;
-                    } else {
-                        numerrors++;
-                    }
-                } 
-            } 
+        // if there is no page directory entry skip the page
+        if (!page_directory[pde]) continue;
+        // otherwise process the page table entry
+        for (pte_t pte = 0; pte < 1024; pte++) {
+            // do we have a physical address?
+            if ((*PAGETABLE)[pde][pte] != 0) {
+                // get the physical address page
+                auto page = (uint32_t)(&(*PAGETABLE)[pde][pte]) >> 12;
+                if (page) {
+                    VirtMemoryPageStatus[page] |=  VIRT_MEMORY_IN_USE;
+                }
+            }
         }
     }
 
@@ -652,7 +661,7 @@ uint32_t setInUseVirtualMemory() {
 // initialize the virtual memory manager, this must be call AFTER the initPMM function
 bool initVMM() {
     // set available kernel pages
-    highAvailKernelPage = 0xffbe7;
+    highAvailKernelPage = 0xFFBE7;
     lowAvailKernelPage = (uint32_t) &_heap_start >> 12;
     nextAvailKernelPage = lowAvailKernelPage;
 
@@ -660,6 +669,13 @@ bool initVMM() {
 
     // initialize table
     memset(VirtMemoryPageStatus,0,sizeof(VirtMemoryPageStatus));
+
+       // walk the page table to get what's in use
+    uint32_t errors = setInUseVirtualMemory();
+    if (errors) {
+        printf("setInUseVirtualMemory() had %ul error\n\r",errors);
+        rtncde = false;
+    }
 
     // set kernel memory
     for (uint32_t page = ((uint32_t)(&_boot_kernel_start + 0xC00000) >> 12); (page <= 0xFFFFF) && (page != 0); page++) {
@@ -670,13 +686,11 @@ bool initVMM() {
     // kernel code is read only
     for (uint32_t page = ((uint32_t)&_text_start >> 12); page <= ((uint32_t)&_text_end >> 12); page++) {
         VirtMemoryPageStatus[page] |= VIRT_MEMORY_READ_ONLY;
-        VirtMemoryPageStatus[page] |= VIRT_MEMORY_IN_USE;
     }
 
     // read only data is read only
     for (uint32_t page = (uint32_t)&_rodata_start >> 12; page <= ((uint32_t)&_rodata_end >> 12); page++) {
         VirtMemoryPageStatus[page] |= VIRT_MEMORY_READ_ONLY;
-        VirtMemoryPageStatus[page] |= VIRT_MEMORY_IN_USE;
     }
 
     // set memory not swappable
@@ -690,13 +704,8 @@ bool initVMM() {
         VirtMemoryPageStatus[page] |= (uint8_t)VIRT_MEMORY_NOT_SWAPPABLE;
     }
 
-
-    // walk the page table to get what's in use
-    uint32_t errors = setInUseVirtualMemory();
-    if (errors) {
-        printf("setInUseVirtualMemory() had %ul error\n\r",errors);
-        rtncde = false;
-    }
+    // page zero is not swappable
+    VirtMemoryPageStatus[0] |= (uint8_t)VIRT_MEMORY_NOT_SWAPPABLE;
 
     return rtncde;
 }

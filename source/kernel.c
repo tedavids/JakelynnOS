@@ -102,8 +102,8 @@ void kernel_main() {
     }
 
     //  print name they can read while I do other stuff
-    printf("%s Version: %s Date: %s\n\r",(char *)&OSNAME,(char *)&OSVERSION,(char *)&OSDATE);
-
+    printf("%s Boot Version: %s Date: %s\n\r",(char *)&BOOTNAME,(char *)&BOOTVERSION,(char *)&BOOTDATE);
+    print("JakelynnOS Version: 0.0.0 Date: 2026-09-08\n\r");
     // system clock
     rtime_t time = read_system_clock();
     printf("Time: %uw/%ub/%ub %ub:%ub:%ub\n\r",
@@ -160,6 +160,15 @@ void kernel_main() {
     }
     printf("Success\n\r");
 
+    #if defined(INCLUDE_TESTS) && defined(PMM_TESTS)
+    print("Starting Physical memory manager tests...");
+    if (!pmmtests()) {
+        printf("Failed\n\r");
+    } else {
+        printf("Successful\n\r");
+    }
+#endif
+
     // initialize memory managers
     printf("Initializing physical memory manager...");
     if (!initPMM(&multiboot_info.meminfo, &multiboot_info.mmap)) {
@@ -169,7 +178,7 @@ void kernel_main() {
     printf("Success\n\r");
 
 #if defined(INCLUDE_TESTS) && defined(VMM_TESTS)
-    print("Starting virtual memory manager tests...");
+    print("Starting virtual memory manager tests...\r\n");
     if (!vmmtests()) {
         printf("Failed\n\r");
     } else {

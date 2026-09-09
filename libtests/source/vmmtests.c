@@ -101,7 +101,7 @@ bool vmmtests() {
 
     // test swappable
     // not swappable
-    if (!isVirtMemSwappable(0x0)) {
+    if (isVirtMemSwappable(0x0)) {
         print("isVirtMemSwappable(0x0) returned true, failed\n\r");
         rtncde = false;
     }
@@ -161,7 +161,7 @@ bool vmmtests() {
         }
     }
     // clear the swappable address
-    clearVirtMemSwappable(0x0);
+    clearVirtMemSwappedOut(0x0);
 
     // virtual memory in use
     
@@ -261,19 +261,107 @@ bool vmmtests() {
 
 
     // get next available kernel page
-    auto page = getNextAvailKernelPage();
-    if (page != 0xc031d) {
-        printf("getNextAvailKernelPage failed, returned 0x%xl, should be 0x%xl\n\r",
-            page, (uint32_t) 0xc031d);
-        rtncde = false;
-    }
+    auto firstpage = getNextAvailKernelPage();
+    
     // this should be the next page
-    page = getNextAvailKernelPage();
-    if (page != 0xc031e) {
+    auto page = getNextAvailKernelPage();
+    if (page != (firstpage + 1)) {
         printf("getNextAvailKernelPage failed, returned 0x%xl, should be 0x%xl\n\r",
-            page, (uint32_t) 0xc031e);
+            page, (firstpage + 1));
         rtncde = false;
     }
     
+    // test allocation
+    auto addr = allocVirtKrnlMem(true);
+    if (!addr) {
+        print("allocVirtKrnlMem(true) failed\n\r");
+        rtncde = false;
+    } else {
+        // test memory flags
+        if (!isVirtMemInUse((uint32_t)addr)) {
+            print("allocVirtKrnlMem(true) corrupted the in use flag\n\r");
+            rtncde = false;
+        }
+        if (!isVirtKrnlMem((uint32_t)addr)) {
+            print("allocVirtKrnlMem(true) corrupted the kernel memory flag\n\r");
+            rtncde = false;
+        }
+        if (isVirtMemReadOnly((uint32_t)addr)) {
+            print("allocVirtKrnlMem(true) corrupted the read only flag\n\r");
+            rtncde = false;
+        }
+        if (isVirtMemShared((uint32_t)addr)) {
+            print("allocVirtualKrnlMem(true) corrupted the shared flag\n\r");
+            rtncde = false;
+        }
+        if (!isVirtMemSwappable((uint32_t)addr)) {
+            printf("allocVirtKrnlMem(true) corrupted teh swappable flag\n\r");
+            rtncde = false;
+        }
+        if (isVirtMemSwappedOut((uint32_t)addr)) {
+            printf("allocVirtKrnlMem(true) corrupte the swapped out flag\n\r");
+            rtncde = false;
+        }
+    }
+
+    // test that the page is good
+    print("Testing allocation, is page good...");
+    *addr = 5;
+    print("success\n\r");
+
+    // test deallocation
+    if (!deallocVirtKrnlMem((uint32_t)addr, true)) {
+        print("deAllocVirtKrnlMem(true) failed\n\r");
+        rtncde = false;
+    } else {
+        // test memory flags
+        if (isVirtMemInUse((uint32_t)addr)) {
+            print("deallocVirtKrnlMem(true) corrupted the in use flag\n\r");
+            rtncde = false;
+        }
+        if (!isVirtKrnlMem((uint32_t)addr)) {
+            print("deallocVirtKrnlMem(true) corrupted the kernel memory flag\n\r");
+            rtncde = false;
+        }
+        if (isVirtMemReadOnly((uint32_t)addr)) {
+            print("deallocVirtKrnlMem(true) corrupted the read only flag\n\r");
+            rtncde = false;
+        }
+    }
+
+    // test our routine to get a range of kernel pages
+
+    address_range_t range = getAvailKernelPageRange(5);
+
+    if ((range.lowpage == 0xFFFFFFFF) && (range.highpage == 0xFFFFFFFF)) {
+        printf("getAvailKernelPageRange(5) failed\n\r");
+        rtncde = false;
+    } else {
+        if ((range.highpage - range.lowpage) != 4) {
+            printf("getAvailKernelPageRange(5) did not return the proper range (%Xl,%Xl)\n\r", range.lowpage, range.highpage);
+            rtncde = false;
+        } else {
+            // we can now test our allocation function
+            uint32_t lastallocated;
+            uint32_t *addr = allocVirtMemBlock(range.lowpage<<12,range.highpage<<12,&lastallocated);
+            if (!addr) {
+                printf("allocVirtMemBlock failed\n\r");
+                rtncde = false;
+            } else {
+                if (lastallocated != (range.highpage<<12)) {
+                    printf("allocVirtMemBlock failed.  highpage = %xl, last alloc = %xl\r\n", range.highpage, lastallocated);
+                    rtncde = false;
+                }
+                // test dealloc
+                bool status = deallocVirtMemBlock(range.lowpage<<12,range.highpage<<12, &lastallocated);
+                if (!status) {
+                    printf("deallocVirtMemBlock(%Xl,%Xl,lastalloc) failed, last dealloc: %Xl\n\r",
+                        range.lowpage<<12, range.highpage<<12,lastallocated);
+                    rtncde = false;
+                }
+            }
+        }
+    }
+
     return rtncde;
 }

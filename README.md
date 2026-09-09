@@ -23,15 +23,16 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 * Get test scripts written
   * libc - not started
   * libkrnl
-    * Pysical Memory Manager Tests -- Complete
-    * Virtual Memory Manager Tests -- in Progress
+    * Virtual Memory Manager Tests -- Complete
+    * Multiboot tests
   * libintr - not started
   * libcmd
-* Get physical memory manager working -- Pending tests
-* Get Virtual Memory Manager working -- pending tests
+* Get Virtual Memory Manager working -- Complete
+* Get backspace working on keyboard input routine
 * Get all the frame buffer info from MULTIBOOT2
 * Print all multiboot info
 * Set up Heap
+
 
 
 ## 🛠️ Prerequisite

@@ -48,6 +48,7 @@ $(OBJDIR)/time.o \
 $(OBJDIR)/bitarray.o \
 $(OBJDIR)/registers.o \
 $(OBJDIR)/krnlcmdline.o \
+$(OBJDIR)/pagetable.o \
 #$(OBJDIR)/heap.o \
 $(OBJDIR)/heaptree.o \
 $(OBJDIR)/slaballoc.o \
@@ -77,6 +78,9 @@ $(OBJDIR)/ports.o : $(SRCDIR)/ports.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/multiboot.o : $(SRCDIR)/multiboot.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+$(OBJDIR)/pagetable.o : $(SRCDIR)/pagetable.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/pmm.o : $(SRCDIR)/pmm.c
