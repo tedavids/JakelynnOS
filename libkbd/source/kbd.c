@@ -80,6 +80,7 @@ extern int kbdInput(char* restrict buffer, int bufflen, bool echo) {
             // newline
             case 0xa:
                 buffer[cmdidx] = '\0';
+                if (echo) print("\n\r");
                 break;
             case KBD_KEY_ESC:
                 buffer[0] = '\0';

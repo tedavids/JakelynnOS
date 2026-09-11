@@ -128,8 +128,28 @@ struct tag_framebuffer_t {
     } palette;
 };
 
+struct tag_image_base_phy_addr_t {
+    uint32_t        type;
+    uint32_t        size;   
+    uint32_t        basephyaddr;
+};
+
+struct tag_APM_t {
+    uint32_t        type;
+    uint32_t        size;
+    uint16_t        version;
+    uint16_t        cseg;
+    uint32_t        offset;
+    uint16_t        cseg_16;
+    uint16_t        dseg;
+    uint16_t        flags;
+    uint16_t        cseg_len;
+    uint16_t        cseg16_len;
+    uint16_t        dseg_len;
+}  __attribute__ ((packed));
+
 // helper function
-inline static uint32_t align8(uint32_t x) {
+static uint32_t align8(uint32_t x) {
     return  ((x + 7) & ~(uint32_t)7);
 }
 
@@ -268,7 +288,27 @@ bool loadMultibootInfo() {
     
                break;
             }
+            
+            case IMAGE_LOAD_BASE_TAG: {
+                struct tag_image_base_phy_addr_t *img = (struct tag_image_base_phy_addr_t *) tag;
+                multiboot_info.basephyaddr = img->basephyaddr;
+                break;
+            }
+            case POWER_MGMT_TAG: {
+                struct tag_APM_t * apm = (struct tag_APM_t *) tag;
+                multiboot_info.APM.version = apm->version;
+                multiboot_info.APM.cseg = apm->cseg;
+                multiboot_info.APM.dseg = apm->dseg;
+                multiboot_info.APM.flags = apm->flags;
+                multiboot_info.APM.cseg_len = apm->cseg_len;
+                multiboot_info.APM.dseg_len = apm->dseg_len;
+                break;
+            }
+            // purposely ignored
+            case 9:
+                break;
             default:
+                printf("Multiboot tag: %ul skipped\n\r",tag->type);
                 break;
         }
 

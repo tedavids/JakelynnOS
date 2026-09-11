@@ -109,6 +109,16 @@ struct multiboot_ACPI_RSDP_t {
     uint8_t reserved[3];
 };
 
+// tag 10 APM Info
+struct multiboot_APM_t {
+    uint16_t        version;
+    uint32_t        offset;
+    uint16_t        cseg;
+    uint16_t        dseg;
+    uint16_t        flags;
+    uint16_t        cseg_len;
+    uint16_t        dseg_len;
+};
 
 // my structure to hold ALL multiboot info
 struct multiboot_info_t {
@@ -120,6 +130,8 @@ struct multiboot_info_t {
     struct multiboot_mem_map_info_t     mmap;
     struct multiboot_framebuffer_info_t framebuf;
     struct multiboot_ACPI_RSDP_t        ACPI_RSDP;
+    uint32_t                            basephyaddr;
+    struct multiboot_APM_t              APM;
 };
 
 

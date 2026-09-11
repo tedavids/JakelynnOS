@@ -10,7 +10,7 @@ I'm hoping to correct many of these in this project.  Major improvements in desi
 * Move the kernel to the higher half immediately - Done
 * Create my GDT in the .data section so it is preloaded - Done
 
-Full disclosure:  While I was a professional developer on the IBMi(AS/400) I have never been formally trained in C\C++ or x86 assembler
+Full disclosure:  While I was a professional developer on the IBMi(AS/400) I have never been formally trained in C\C++ or x86 assembler.  That being said I have written many, many C and C++ programs for interfacing many different systems both on the IBMi, AIX, Linux, and PC
 
 ## Features
 
@@ -26,14 +26,31 @@ Full disclosure:  While I was a professional developer on the IBMi(AS/400) I hav
   * libkrnl
     * Multiboot tests
   * libintr - not started
-  * libcmd
+  * libcmd - not started
 * Get Virtual Memory Manager working -- Complete
 * Get backspace working on keyboard input routine, plus move to kbd.c -- Complete
-* Get all the frame buffer info from MULTIBOOT2
-* Print all multiboot info
+* Get all the frame buffer info from MULTIBOOT2 - Complete
+* Print all multiboot info -- Done for now, APM, and 
 * Set up Heap
+* New 'doCmd' commands
+  * print vmmap
+  * kloadinfo -- print the kernel load info (.text, .data, .rodata, etc), also include boot.S info
+* Set up ACPI memory
+  * New type in PMM, find which reserved memory block contains this address
+  * Identity map in VMM
+  * Add tests
+  * give own header (acpi.h) and .c (acpi.c) files
+  * Fully set up data structures and functions
+  * Add new kernel.c line to set it up (after heap)
+* Revisit timer setup, need to make a timer that kicks off every x MS (set by command line?)
+* Start working on a scheduler and multithreading
 
+## AI Usage
 
+I use AI for the following:
+* code reviews
+* gernerate code that I can study, then I write my own code.  I do not use AI generated code, it defeats the purpose of this project which is learningS
+* Suggestions on how to implement something
 
 ## 🛠️ Prerequisite
 
@@ -55,3 +72,5 @@ Full disclosure:  While I was a professional developer on the IBMi(AS/400) I hav
 
 ## License 
 Distributed under GPL3 
+
+## Notes

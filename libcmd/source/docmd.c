@@ -19,22 +19,6 @@ int doCommand(const char* command) {
     trimc('\n',cmd);
     trimc('\r',cmd);
 
-/*
-    if (!strncmp(5,"mmap",cmd)) {
-        return printmmap();
-    }
-
-    if (!strncmp(8,"cmdline",cmd)) {
-        return printcmdline();
-    }
-
-    if (!strncmp(11,"registers",cmd)) {
-        printAllRegisters();
-        return 0;
-    }
-
-    return 0;
-*/
     // buffer for token
     char buff[80];
     // starting point in buffer
@@ -57,6 +41,10 @@ int doCommand(const char* command) {
         } else if (!strncmp((int)(strlen(token) + 1), "registers", token)) {
             printAllRegisters();
             return 0;
+        } else if (!strncmp((int)strlen(token) + 1, "modules",token)) {
+            return printmultibootmodules();
+        } else if (!strncmp((int)(strlen(token) + 1), "bootinfo", token)) {
+            return printbootinfo();
         }
     }
 

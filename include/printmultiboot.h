@@ -35,4 +35,13 @@ extern int printpmmap();
 // Returns:     0 on normal completion
 extern int printcmdline();
 
+// print modules
+// Parameters:  None
+// Returns:     0 on normal completion, 1 if no modules to print
+int printmultibootmodules();
+
+// print the boot info
+// Parameters:  None
+// Returns:     0 on normal completion, 1 if no modules to print
+int printbootinfo();
 #endif

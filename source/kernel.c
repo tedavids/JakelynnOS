@@ -182,9 +182,10 @@ void kernel_main() {
         if (kbdInput(command,sizeof(command),true)) {
             printf("\r");
             rtncde = doCommand(command);
-            printf("Return code: %iw\n\r", rtncde);
+            if (rtncde) {
+                printf("Return code: %iw\n\r", rtncde);
+            }
         }
-
     }
 
     print("Kernel end");
