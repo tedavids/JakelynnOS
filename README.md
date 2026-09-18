@@ -27,10 +27,8 @@ Full disclosure:  While I was a professional developer on the IBMi(AS/400) I hav
     * Multiboot tests -- not started
   * libintr - not started
   * libcmd - not started
-* Redo Physical Memory Manager...Again
-* Get Virtual Memory Manager working based on new PMM
-* Get backspace working on keyboard input routine, plus move to kbd.c -- Complete
-* Get all the frame buffer info from MULTIBOOT2 - Complete
+* Redo Physical Memory Manager...Done
+* Get Virtual Memory Manager working based on new PMM - in process
 * Print all multiboot info -- Done for now, APM, and 
 * Set up Heap
 * New 'doCmd' commands
@@ -71,8 +69,8 @@ I don't use it for
 * OSDev contributors
 * Reddit users
   * Octocontrabass, sebihepp, and nullplan for their help getting to the Higher Half
-
 * https://www.tutorialspoint.com/data_structures_algorithms/avl_tree_algorithm.htm for a self balancing binary tree
+* ostep.org Operating systems 3 easy pieces, I also bought the book
 
 ## License 
 Distributed under GPL3 
