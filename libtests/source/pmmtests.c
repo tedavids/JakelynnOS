@@ -5,305 +5,175 @@
 #include <pmm.h>
 
 extern uint32_t stack_top;
-
-// the two multiboot structures we will be using
-
-static struct multiboot_memory_info_t meminfo;
-static struct multiboot_mem_map_info_t mmap;
-
+extern uint32_t page_directory[1024];
 
 bool pmmtests() {
-
-    // check base functions first
-
-    
+   
     bool rtncde = true;
     // start basic tests
-
-    uint32_t tmpaddr = 0;
-   
-    // physical address of page directory entries
-    if (physAddrOfPDE(&tmpaddr, 1024)) {
-        print("physAddrOfPDE() accepted an out of range pde\n\r");
+   // check base functions first
+    if (PageOffToAddress(AddressToPageOff(0x12345000)) != 0x12345000) {
+        printf("PageOffToAddress(AddressToPageOff(0x12345000)) failed, returned: 0x%Xl\n\r",
+            PageOffToAddress(AddressToPageOff(0x12345000)));
         rtncde = false;
     }
 
-    if (physAddrOfPDE(nullptr, 1023)) {
-        print("physAddrOfPDE() accepted a nullptr for address\n\r");
+    // test page alignment
+    if (PageAlignDown(0x9c000) != 0x9c000) {
+        printf("PageAlignDown(0x9c000) failed, returned 0x%xl\n\r",PageAlignDown(0x9c00));
+        rtncde = false;
+    }
+    if (PageAlignDown(0x9c001) != 0x9c000) {
+        printf("PageAlignDown(0x9c001) failed, returned 0x%xl\n\r",PageAlignDown(0x9c01));
+        rtncde = false;
+    }
+    if (PageAlignDown(0x9cfff) != 0x9c000) {
+        printf("PageAlignDown(0x9c00) failed, returned 0x%xl\n\r",PageAlignDown(0x9cff));
+        rtncde = false;
+    }
+    if (PageAlignUp(0x9c000) != 0x9c000) {
+        printf("PageAlignUp(0x9c000) failed, returned 0x%xl\n\r",PageAlignUp(0x9c000));
+        rtncde = false;
+    }
+    if (PageAlignUp(0x9c001) != 0x9d000) {
+        printf("PageAlignUp(0x9c001) failed, returned 0x%xl\n\r",PageAlignUp(0x9c001));
+        rtncde = false;
+    }
+    if (PageAlignUp(0x9cfff) != 0x9d000) {
+        printf("PageAlignUp(0x9cfff) failed, returned 0x%xl\n\r",PageAlignUp(0x9cfff));
         rtncde = false;
     }
 
-    if (!physAddrOfPDE(&tmpaddr, 1023)) {
-        print("physAddrOfPDE(&tmpaddr, 1023) didn't find the address of entry 1023\n\r");
-        rtncde = false;
-    } else {
-        if (tmpaddr != ((uint32_t)&stack_top) - 0xC0000000) {
-            printf("physAddrOfPDE(&tmpaddr, 1023) didn't return 0x%Xl, returned 0x%Xl\n\r",&stack_top, tmpaddr);
-            rtncde = false;
-        }
-    }
-
- 
-    uint32_t pde = 1023;
-    uint32_t pte = 3;
-
-    // addrFromPdePdt
-    if (physAddrFromPdePdt(nullptr,0,0)) {
-        print("addrFromPdePdt(nullptr, 0,0) accepted a null pointer\n\r");
-        rtncde = false;
-    }
-    if (physAddrFromPdePdt(&tmpaddr,1024,0)) {
-        printf("physAddrFromPdePdt(&tmpaddr,1024,0) accepted an out of range pde\n\r");
-        rtncde = false;
-    }
-    if (physAddrFromPdePdt(&tmpaddr, 0, 1024)) {
-        print("physAddrFromPdePdt(&tmpaddr, 0, 1024) accepte an out of range pte\n\r");
-        rtncde = false;
-    }
-    if (!physAddrFromPdePdt(&tmpaddr, pde, pte)) {
-        printf("addrFromPdePte(&tmpaddr, %ul,%ul) failed.\n\r", pde, pte);
-        rtncde = false;
-    } else {
-        if (tmpaddr != page_directory[3]) {
-            printf("addrFromPdePte(&tmpaddr, %ul,%ul) failed. should be 0x%Xl, returned 0x%Xl\n\r", pde, pte, page_directory[3], tmpaddr);
-            rtncde = false;        
-        }
-    }
-    pte = 0;
-    pde = 0;
-    if (!physAddrFromPdePdt(&tmpaddr, pde, pte)) {
-        printf("addrFromPdePte(&tmpaddr, %ul,%ul) failed \n\r", pde, pte);
-        rtncde = false;
-    } else {
-        if (tmpaddr != 0x0) {
-            printf("addrFromPdePte(&tmpaddr, %ul,%ul) failed. should be 0x0, returned 0x%Xl\n\r", pde, pte, tmpaddr);
-            rtncde = false;
-        }
-    }
-
-    // AddressToPge
-    if (AddressToPage(0) != 0) {
-        printf("AddressToPage(0) failed, should be 0, returned: %xl\n\r", AddressToPage(0));
-        rtncde = false;
-    }
-    if (AddressToPage(0xFFFFFFFF) != 0xFFFFF) {
-        printf("AddressToPage(0xFFFFFFFF) failed, should be 0xFFFFF, returned: %xl\n\r", AddressToPage(0xFFFFFFFF));
-        rtncde = false;
-    }
-    if (AddressToPage(0xC1234567) != 0xC1234) {
-        printf("AddressToPage(0xC1234567) failed, should be 0xC1234, returned: %xl\n\r", AddressToPage(0xC1234567));
+    // reserved memory ranges
+    auto numrsvdranges = pmmNumRsvdMemRanges();
+    if (numrsvdranges != (uint32_t) 6) {
+        printf("physNumRsvdMemRanges() did not return 6, returned %ul\n\r",pmmNumRsvdMemRanges());
         rtncde = false;
     }
 
-    if (getPDEFromAddress(0xC0008000) != 0x300) {
-        printf("getPDEFromAddress(0xC0008000) failed. Returned 0x%xl, expected 0x300\n\r",getPDEFromAddress(0xC0008000));
+    // Out of range
+    auto range = pmmGetRsvdMemRange(numrsvdranges);
+    if (range.startaddr != MEM_RANGE_ERROR) {
+        printf("physGetRsvdMemRange(outofrange), passed validation returned: start 0x%Xl, end 0x%Xl\n\r",
+            range.startaddr, range.endaddr);
+        rtncde = false;
+    }
+    // range 1
+    range = pmmGetRsvdMemRange(0);
+    if ((range.startaddr != 0x9fc00) || (range.endaddr != 0x9ffff)) {
+        printf("physGetRsvdMemRange(0) failed, should be (0x9fc00, 0x9ffff), returned (0x%xl,0x%xl)\n\r",
+            range.startaddr, range.endaddr);
+        rtncde = false;
+    }
+    // range 6
+    range = pmmGetRsvdMemRange(numrsvdranges - 1);
+    if ((range.startaddr != 0xFFFC0000) || (range.endaddr != 0xFFFFFFFF)) {
+        printf("physGetRsvdMemRange(6) failed, should be (0xFFFC0000, 0xFFFFFFFF), returned (0x%xl,0x%xl)\n\r",
+            range.startaddr, range.endaddr);
         rtncde = false;
     }
 
-    if (getPTEFromAddress(0xF01B478A) != 436) {
-        printf("getPTEFromAddress(0xF01B478A) failed.  Returned 0x%xl, expected 0x1B4\n\r", getPTEFromAddress(0xF01B478A));
+    // physical memory information
+    auto meminfo = pmmGetPhysMemInfo();
+    if (meminfo.numPagesExist != 0x2ff8a) {
+        printf("meminfo.numPagesExist != 0x2ff8a, returned 0x%xl\n\r",meminfo.numPagesExist);
+        rtncde = false;
+    }
+    if (meminfo.numPagesInUse != 0x13a) {
+        printf("meminfo.numPagesinUse != 0x13a, returned 0x%xl\n\r",meminfo.numPagesInUse);
+        rtncde = false;
+    }
+    if (meminfo.numPagesAvail != 0xfef9) {
+        printf("meminfo.numPagesAvail != 0xfef9, returned 0x%xl\n\r",meminfo.numPagesAvail);
+        rtncde = false;
+    }
+    if (meminfo.numPagesRsvd != 0x10053) {
+        printf("meminfo.numPagesRsvd != 0x10053, returned 0x%xl\n\r",meminfo.numPagesRsvd);
+        rtncde = false;
+    }
+    if (meminfo.numPagesDefect != 0x0) {
+        printf("meminfo.numPagesDefect != 0x0, returned 0x%xl\n\r",meminfo.numPagesDefect);
+        rtncde = false;
+    }
+    if (meminfo.numPagesAvailInUse != 0x121) {
+        printf("meminfo.numPagesAvailInUse != 0x121, returned 0x%xl\n\r",meminfo.numPagesAvailInUse);
+        rtncde = false;
+    }
+    if (meminfo.numPagesRsvdInUse != 0x19) {
+        printf("meminfo.numPagesRsvdInUse != 0x10, returned %xl\n\r",meminfo.numPagesRsvdInUse);
         rtncde = false;
     }
 
-    if (getPageTablePhysAddress(0,0) != 0) {
-        printf("getPageTablePhysicalAddress(0,0) failed returned 0x%Xl, expected 0x%Xl\n\r", 
-            getPageTablePhysAddress(0,0), 0);
+    // test get phys mem size
+    if (pmmMemSize() != 267358208) {
+        printf("physMemSize() not 267358208, returned %ul\n\r", pmmMemSize());
         rtncde = false;
     }
 
-    if ((uint32_t) getPageTableVirtAddress(768,0) != 0xFFF00000) {
-        printf("getPageTableVirtAddress(768,0) failed, returned 0x%Xl, expected 0xFFF00000\n\r", getPageTableVirtAddress(768,0));
-        rtncde = false;
-    }
-    // if base functions don't work, pointless to test init
-    if (!rtncde) return false;
- 
-    // set of our structures
-    // we will have 3 memory areas
-
-    // type 1 is available
-    // type 2 is reserved
-
-    // Type Start       End         Pages
-    //  1   0x0         0x2FFF      3
-    //  2   0x7000      0x9FFF      3
-    //  1   0x10000     0x12FFF     3
-
-    meminfo.lower = 0x6000; // 6 pages 3 available 3 reserved
-    meminfo.upper = 0x3000; // 3 pages
-
-    mmap.count = 3; // we have 3 regions
-    // region 1
-    mmap.region[0].baseaddr = 0x0;
-    mmap.region[0].endaddr = 0x2FFF;
-    mmap.region[0].memtype = 1;
-
-    // region 2
-    mmap.region[1].baseaddr = 0x7000;
-    mmap.region[1].endaddr = 0x9FFF;
-    mmap.region[1].memtype = 2;
-
-    // region 3
-    mmap.region[2].baseaddr = 0x10000;
-    mmap.region[2].endaddr = 0x12FFF;
-    mmap.region[2].memtype = 1;
-
-    rtncde = processMultibootMemMap(&mmap);
-    if (!rtncde) {
-        print("processMultibootMemMap() failed\n\r");
-    }
-
-
-    // check simple functions
-
-    // this sould have worked
-    // check setInUsePhysicalMemory()
-    auto errors = setInUsePhysicalMemory();
-    // we are expecting ### errors
-    if (errors != 1505) {
-        printf("setInUsePhysicalMemory() failed, should have had 1505 error, returned %ul\n\r", errors);
-    }
-
-    
-    // check that PhysMemory is set correctly
-    // locations 0x0-0x2FFF should show available
-    for (uint32_t addr = 0x0; addr < 0x2FFF; addr+= 0x1000) {
-        if (!physMemExists(AddressToPage(addr))) {
-            printf("!physMemExists(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-        if (!physMemAvail(AddressToPage(addr))) {
-            printf("!physMemAvail(%ul) afiled\n\r", addr);
-            rtncde = false;
-        }
-        if (physMemReserved(AddressToPage(addr))) {
-            printf("physMemReserved(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-    }
-
-   // locations 0x3000-0x9FFF should show not existing
-    for (uint32_t addr = 0x3000; addr < 0x6FFF; addr+= 0x1000) {
-        if (physMemExists(AddressToPage(addr))) {
-            printf("doesPhysMemoryExist(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-        if (physMemAvail(AddressToPage(addr))) {
-            printf("isPhysMemAvail(%ul) afiled\n\r", addr);
-            rtncde = false;
-        }
-        if (physMemReserved(AddressToPage(addr))) {
-            printf("isPhysMemReserved(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-    }
-
-   // locations 0x7000-0x9FFF should show reserved
-    for (uint32_t addr = 0x7000; addr < 0x9FFF; addr+= 0x1000) {
-        if (!physMemExists(AddressToPage(addr))) {
-            printf("!doesPhysMemoryExist(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-        if (physMemAvail(AddressToPage(addr))) {
-            printf("isPhysMemAvail(%ul) afiled\n\r", addr);
-            rtncde = false;
-        }
-        if (!physMemReserved(AddressToPage(addr))) {
-            printf("!isPhysMemReserved(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-     }
-
-       // locations 0x10000-0x12FFF should show available
-    for (uint32_t addr = 0x10000; addr < 0x12FFF; addr+= 0x1000) {
-        if (!physMemExists(AddressToPage(addr))) {
-            printf("!doesPhysMemoryExist(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-        if (!physMemAvail(AddressToPage(addr))) {
-            printf("!isPhysMemAvail(%ul) afiled\n\r", addr);
-            rtncde = false;
-        }
-        if (physMemReserved(AddressToPage(addr))) {
-            printf("isPhysMemReserved(%ul) failed\n\r", addr);
-            rtncde = false;
-        }
-     }
-
-     // check physical memory in use
-    if (!physMemInUse(0x2)) {
-        print("physMemInUse(0x2) failed\n\r");
-        rtncde = false;
-    }
-    if (!physMemInUse(0x7)) {
-        print("!physMemInUse(0x7) failed\n\r");
-        rtncde = false;
-    }
-
-    if (!physMemInUse(0x10)) {
-        print("!physMemInUse(0x10) failed\n\r");
-        rtncde = false;
-    }    
-
-    // for allocations and such we need the real data
-    if (!initPMM(&multiboot_info.meminfo, &multiboot_info.mmap)) {
-        print("initPMM() failed in testing\n\r");
-        return false;
-    }
-
-    // test allocation
-    uint32_t addr = 0;
-    if (!allocPhysMem(&addr)) {
-        printf("allocPhysMem(&addr) failed\n\r");
+    // test physAlloc()
+    auto physaddr = pmmAlloc();
+    if (!physaddr) {
+        print("physAlloc() failed, returned 0\n\r");
         rtncde = false;
     } else {
-        if (!addr) {
-            printf("allocPhysMem(&addr) failed, returned 0x0\n\r");
+        // not test free
+        if (!pmmFree(physaddr)) {
+            printf("physFree(0x%Xl) failed\n\r", physaddr);
             rtncde = false;
-        } else {
-            auto page = AddressToPage(addr);
-            // check that the flags are correct 
-            if (!physMemExists(page)) {
-                print("allocPhysMem(&addr) overwrote exist flag\n\r");
-                rtncde = false;
-            }
-            if (!physMemAvail(page)) {
-                print("allocPhysMem(&addr) overwrote available flag\n\r");
-                rtncde = false;
-            }
-            if (!physMemInUse(page)) {
-                printf("allocPhysMem(&addr) did not set in use flag\n\r");
-                rtncde = false;
-            }
         }
     }
 
-    if (!multiAllocPhysMem(AddressToPage(addr))) {
-        print("multiAllcoPhysMem(addr) failed\n\r");
+    // test rsvdAlloc()
+    // try to allcate non reserved memory physaddr has an available address here
+    physaddr = pmmAllocRsvd(physaddr);
+    if (physaddr) {
+        print("physAllocRsvd() failed, allocated an available address \n\r");
         rtncde = false;
     } 
-    
-    // test deallocation
-    if (!deAllocPhysMem(AddressToPage(addr))) {
-        printf("deAlocPhysMem() failed\n\r");
+
+    physaddr = pmmAllocRsvd(0x9fc00);
+    if (!physaddr) {
+        print("physAllocRsvd(0x9fc00) failed, returned 0\n\r");
         rtncde = false;
     } else {
-        auto page = AddressToPage(addr);
-        // make sure it deallocated
-        if (physMemInUse(page)) {
-                printf("dellocPhysMem(&addr) did not clear in use flag\n\r");
-                rtncde = false;
-            }
-        // check that the flags are correct 
-        if (!physMemExists(page)) {
-            print("deAllocPhysMem(&addr) overwrote exist flag\n\r");
+        // not test free
+        if (!pmmFreeRsvd(physaddr)) {
+            printf("physFree(0x%Xl) failed\n\r", physaddr);
             rtncde = false;
         }
-        if (!physMemAvail(page)) {
-            print("deAllocPhysMem(&addr) overwrote available flag\n\r");
-            rtncde = false;
-        }
+    }
 
+    // try to allcate non reserved memory
+    physaddr = pmmAllocRsvd(0x9fc00);
+    if (!physaddr) {
+        print("physAllocRsvd(0x9fc00) failed, returned 0\n\r");
+        rtncde = false;
+    } else {
+        // not test free
+        if (!pmmFreeRsvd(physaddr)) {
+            printf("physFree(0x%Xl) failed\n\r", physaddr);
+            rtncde = false;
+        }
+    }
+
+    // test allocate reserved range
+    // bad range
+    range = (RsvdMemRange_t){123,456};
+    if (pmmAllocRsvdRange(range) != MEM_RANGE_ERROR) {
+        print("physAllocRsvdRange(badrange) succedded, should have failed\n\r");
+        rtncde = false;
+    }
+    // try a good range
+    range = pmmGetRsvdMemRange(0);
+    if (pmmAllocRsvdRange(range) == MEM_RANGE_ERROR) {
+        print("physAllocRsvdRange(goodrange) failed\n\r");
+        rtncde = false;
+    } else {
+        // deallocate it
+        if (!pmmFreeRsvdRange(range)) {
+            print("physFreeRsvdRange(valid range) failed\n\r");
+            rtncde = false;
+        }
     }
 
     return rtncde;

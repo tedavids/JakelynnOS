@@ -24,8 +24,8 @@
 
 #define MULTIBOOT_TESTS
 #undef PMM_TESTS
-#undef VMM_TESTS
-
+#define VMM_TESTS
+#define HEAP_TESTS
 
 #ifdef MULTIBOOT_TESTS
 extern bool multiboottest();
@@ -40,5 +40,10 @@ extern bool pmmtests();
 // virtual memory manager tests
 extern bool vmmtests();
 #endif
+
+#ifdef HEAP_TESTS 
+// heap tests
+extern bool heaptests();
+#endif 
 
 #endif

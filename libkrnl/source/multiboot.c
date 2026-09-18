@@ -30,65 +30,65 @@
 
 // this structure holds the multiboot informatino
 
-struct multiboot_info_t  multiboot_info;
+multiboot_info_t  multiboot_info;
 
 // local structures
-struct tag_t {
+typedef struct {
     uint32_t type;
     uint32_t size;
-};
+} tag_t;
 
-struct tag_mem_info_t {
+typedef struct {
     uint32_t    type;
     uint32_t    size;
     uint32_t    lower;
     uint32_t    upper;
-};
+} tag_mem_info_t;
 
-struct tag_boot_dev_t {
+typedef struct {
     uint32_t    type;
     uint32_t    size;
     uint32_t    biosdev;
     uint32_t    partition;
     uint32_t    subpartition;
-};
+} tag_boot_dev_t;
 
-struct tag_string_t {
+typedef struct {
     uint32_t    type;
     uint32_t    size;
     char        string[];
-};
+} tag_string_t;
 
-struct tag_mmap_entry_t {
+typedef struct {
     uint64_t    baseaddr;
     uint64_t    len;
     uint32_t    type;
     uint32_t    reserved;
-};
+} tag_mmap_entry_t;
 
-struct tag_mmap_t {
+typedef struct {
     uint32_t            type;
     uint32_t            size;
     uint32_t            entrysize;
     uint32_t            version;
-    struct tag_mmap_entry_t    entry[10];
-};
+    tag_mmap_entry_t    entry[10];
+} tag_mmap_t;
 
-struct multiboot_info_header_t {
+typedef struct {
     uint32_t    size;       // total_size
     uint32_t    reserved;   // reserved
-};
+} multiboot_info_header_t;
 
-struct tag_modules_t {
+typedef struct {
     uint32_t        type;
     uint32_t        size;
     uint32_t        mod_start;
     uint32_t        mod_end;
     char            string[512];
-};
+} tag_modules_t;
 
 // ACPI RSDP tag 14 (copied from: https://wiki.osdev.org/RSDP)
-struct tag_RSDP_t {
+typedef struct {
     uint32_t    type;
     uint32_t    size;
     char        Signature[8];
@@ -96,10 +96,10 @@ struct tag_RSDP_t {
     char        OEMID[6];
     uint8_t     Revision;
     uint32_t    RsdtAddress;
-} __attribute__ ((packed));
+} __attribute__ ((packed)) tag_RSDP_t;
 
 // ACPI RSDP Tag 15 structure for revision 2 (version 2.0+) (copied from https://wiki.osdev.org/RSDP)
-struct tag_XSDP_t {
+typedef struct {
     uint32_t    type;
     uint32_t    size;
     char Signature[8];
@@ -111,9 +111,9 @@ struct tag_XSDP_t {
     uint64_t XsdtAddress;
     uint8_t ExtendedChecksum;
     uint8_t reserved[3];
-} __attribute__ ((packed));
+} __attribute__ ((packed)) tag_XSDP_t;
 
-struct tag_framebuffer_t {
+typedef struct {
     uint32_t        type;
     uint32_t        size;
     uint64_t        address;
@@ -123,18 +123,18 @@ struct tag_framebuffer_t {
     uint8_t         bpp;
     uint8_t         fbtype;
     union {
-        struct multiboot_framebuffer_indexed_color_t    indexedColor;
-        struct multiboot_framebuffer_RGB_info_t         rgbColor;
+        multiboot_framebuffer_indexed_color_t    indexedColor;
+        multiboot_framebuffer_RGB_info_t         rgbColor;
     } palette;
-};
+} tag_framebuffer_t;
 
-struct tag_image_base_phy_addr_t {
+typedef struct {
     uint32_t        type;
     uint32_t        size;   
     uint32_t        basephyaddr;
-};
+} tag_image_base_phy_addr_t;
 
-struct tag_APM_t {
+typedef struct {
     uint32_t        type;
     uint32_t        size;
     uint16_t        version;
@@ -146,7 +146,7 @@ struct tag_APM_t {
     uint16_t        cseg_len;
     uint16_t        cseg16_len;
     uint16_t        dseg_len;
-}  __attribute__ ((packed));
+}  __attribute__ ((packed)) tag_APM_t;
 
 // helper function
 static uint32_t align8(uint32_t x) {
@@ -155,10 +155,10 @@ static uint32_t align8(uint32_t x) {
 
 // build the memory map
 
-void buildMMAP(const struct tag_mmap_t* const mmap) {
+void buildMMAP(const tag_mmap_t* const mmap) {
     multiboot_info.mmap.version = mmap->version;
     multiboot_info.mmap.count = (mmap->size - (3 * sizeof(uint32_t))) / 
-                                sizeof(struct tag_mmap_entry_t);
+                                sizeof(tag_mmap_entry_t);
 
     // check that we don't overrun our entries
     if (multiboot_info.mmap.count > 10) {
@@ -184,25 +184,25 @@ bool loadMultibootInfo() {
 
     // we know our address is good
     // get the info header
-    struct multiboot_info_header_t *mbi = (struct multiboot_info_header_t*) MULTIBOOT_INFO_ADDRESS;
-    struct tag_t *tag = (struct tag_t*) ((uint8_t*)mbi +8);
+    multiboot_info_header_t *mbi = (multiboot_info_header_t*) MULTIBOOT_INFO_ADDRESS;
+    tag_t *tag = (tag_t*) ((uint8_t*)mbi +8);
 
     // load the tags
     while (tag->type != END_TAG) {
         switch (tag->type) {
             case CMDLINE_TAG: {
-                struct tag_string_t *s = (struct tag_string_t *) tag;
+                tag_string_t *s = (tag_string_t *) tag;
                 strncpy(multiboot_info.cmdline,s->string, sizeof(multiboot_info.cmdline));
 
                 break;
                 }
             case BOOT_LOADER_TAG: {
-                struct tag_string_t *s = (struct tag_string_t*) tag;
+                tag_string_t *s = (tag_string_t*) tag;
                 strncpy(multiboot_info.bootloadername, s->string, sizeof(multiboot_info.bootloadername));
                 break;
                 }
             case MODULES_TAG: {
-                struct tag_modules_t *s = (struct tag_modules_t *) tag;
+                tag_modules_t *s = (tag_modules_t *) tag;
                 multiboot_info.modules.start = s->mod_start;
                 multiboot_info.modules.end = s->mod_end;
                 strncpy(multiboot_info.modules.string, s->string, sizeof(multiboot_info.modules.string));
@@ -210,14 +210,14 @@ bool loadMultibootInfo() {
                 break;
             }
             case MEMORY_SIZES_TAG: {
-                struct tag_mem_info_t * meminfo = (struct tag_mem_info_t*) tag;
+                tag_mem_info_t * meminfo = (tag_mem_info_t*) tag;
                 multiboot_info.meminfo.lower = meminfo->lower * 1024;
                 multiboot_info.meminfo.upper = meminfo->upper * 1024;
 
                 break;
                 }
             case BIOS_BOOT_DEV_TAG: {
-                struct tag_boot_dev_t *dev = (struct tag_boot_dev_t *) tag;
+                tag_boot_dev_t *dev = (tag_boot_dev_t *) tag;
                 multiboot_info.bootdev.device = dev->biosdev;
                 multiboot_info.bootdev.partition = dev->partition;
                 multiboot_info.bootdev.subpartition = dev->subpartition;
@@ -225,12 +225,12 @@ bool loadMultibootInfo() {
                 break;
                 }
             case MMAP_TAG: {
-                buildMMAP((struct tag_mmap_t*) tag);
+                buildMMAP((tag_mmap_t*) tag);
 
                 break;
                 }
             case FRAMEBUFFER_TAG: {
-                struct tag_framebuffer_t *frame = (struct tag_framebuffer_t *) tag;
+                tag_framebuffer_t *frame = (tag_framebuffer_t *) tag;
                 multiboot_info.framebuf.phys_address = frame->address;
                 multiboot_info.framebuf.pitch = frame->pitch;
                 multiboot_info.framebuf.width = frame->width;
@@ -258,7 +258,7 @@ bool loadMultibootInfo() {
             case ACPI_OLD_RDSP_TAG: {
                 // check if we have already processed tag 15
                 if (multiboot_info.ACPI_RSDP.Address == 0) {
-                    struct tag_RSDP_t *rsdp = (struct tag_RSDP_t *) tag;
+                    tag_RSDP_t *rsdp = (tag_RSDP_t *) tag;
                     for (int i = 0; i < (int) sizeof(multiboot_info.ACPI_RSDP.Signature); i++) {
                         multiboot_info.ACPI_RSDP.Signature[i] = rsdp->Signature[i];
                     }
@@ -273,7 +273,7 @@ bool loadMultibootInfo() {
                 break;
             }
             case ACPI_NEW_RDSP_TAG: {
-                struct tag_XSDP_t *rsdp = (struct tag_XSDP_t *) tag;
+                tag_XSDP_t *rsdp = (tag_XSDP_t *) tag;
                 for (int i = 0; i < (int) sizeof(multiboot_info.ACPI_RSDP.Signature); i++) {
                     multiboot_info.ACPI_RSDP.Signature[i] = rsdp->Signature[i];
                 }
@@ -290,12 +290,12 @@ bool loadMultibootInfo() {
             }
             
             case IMAGE_LOAD_BASE_TAG: {
-                struct tag_image_base_phy_addr_t *img = (struct tag_image_base_phy_addr_t *) tag;
+                tag_image_base_phy_addr_t *img = (tag_image_base_phy_addr_t *) tag;
                 multiboot_info.basephyaddr = img->basephyaddr;
                 break;
             }
             case POWER_MGMT_TAG: {
-                struct tag_APM_t * apm = (struct tag_APM_t *) tag;
+                tag_APM_t * apm = (tag_APM_t *) tag;
                 multiboot_info.APM.version = apm->version;
                 multiboot_info.APM.cseg = apm->cseg;
                 multiboot_info.APM.dseg = apm->dseg;
@@ -312,7 +312,7 @@ bool loadMultibootInfo() {
                 break;
         }
 
-        tag = (struct tag_t *) ((uint8_t *)tag + align8(tag->size));
+        tag = (tag_t *) ((uint8_t *)tag + align8(tag->size));
     }
 
     return true;

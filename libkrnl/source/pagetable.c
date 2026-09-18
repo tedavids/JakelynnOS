@@ -151,8 +151,6 @@ void     FlushTLB() {
 // invalidate an individual page
 // Parameters:  virtaddress -- The virtual address of the page to be invalidated
 // Returns:     None
-void     invalidatePage(void * virtaddress) {
+void invalidatePage(void * virtaddress) {
     asm volatile("invlpg (%0)" : : "r"(virtaddress) : "memory");
-
-
 }

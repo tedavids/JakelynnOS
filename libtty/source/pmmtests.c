@@ -34,7 +34,7 @@ bool pmmtest() {
     uint32_t inuse = 0;
     // test physical memory arrays
     for (uint32_t page = 0; page <= 0xFFFFF; page++) {
-        if (physMemExists(page)) existcount++;
+        if (pmmMemExists(page)) existcount++;
         if (physMemAvail(page)) availcount++;
         if (physMemReserved(page)) reservedcount++;
         // we have no shared pages to worry about yet
@@ -69,11 +69,11 @@ bool pmmtest() {
     // test functions
 
     // memory exists
-    if (!physMemExists(AddressToPage(0x0))) {
+    if (!pmmMemExists(AddressToPage(0x0))) {
         printf("Error:  Function: doesPhysMemExist(0x0) retured false\n\r");
         rtncde = false;
     }
-    if (physMemExists(0xAFFFF)) {
+    if (pmmMemExists(0xAFFFF)) {
         printf("Error:  Function: doesPhysMemExist(0xAFFFF) returnd true\n\r");
         rtncde = false;
     }

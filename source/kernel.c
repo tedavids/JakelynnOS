@@ -36,7 +36,7 @@
 #include <multiboot.h>
 #include <ps2kbd.h>
 #include <docmd.h>
-#include <heap.h>
+//#include <heap.h>
 
 
 #include "kernel.h"
@@ -106,30 +106,22 @@ void kernel_main() {
     }
     printf("Success\n\r");
 
-    // setting up final page directory and tables
-    printf("Setting up page tables...");
-    if (!initPageDirectory()) {
-        printf("Failed\n\r");
-        abort();
-    }
-    printf("Success\n\r");
-
-    #if defined(INCLUDE_TESTS) && defined(PMM_TESTS)
-    print("Starting Physical memory manager tests...");
-    if (!pmmtests()) {
-        printf("Failed\n\r");
-    } else {
-        printf("Successful\n\r");
-    }
-#endif
-
     // initialize memory managers
     printf("Initializing physical memory manager...");
-    if (!initPMM(&multiboot_info.meminfo, &multiboot_info.mmap)) {
+    if (!initPMM(&multiboot_info.mmap)) {
         printf("Failed\n\r");
-        abort();
+        //abort();
     }
     printf("Success\n\r");
+
+#if defined(INCLUDE_TESTS) && defined(PMM_TESTS) 
+    print("Starting Physical Memory Manager Tests\n\r");
+    if (!pmmtests()) {
+        print("Failed\n\r");
+    } else {
+        print("Success\n\r");
+    }
+#endif 
 
 #if defined(INCLUDE_TESTS) && defined(VMM_TESTS)
     print("Starting virtual memory manager tests...\r\n");
@@ -139,22 +131,22 @@ void kernel_main() {
         printf("Successful\n\r");
     }
 #endif
-
+/*
     printf("Initializing virtual memory manager...");
     if (!initVMM()) {
         printf("Failed\n\r");
         abort();
     }
     printf("Success\n\r");   
-/*
-    // initialize paging
-    printf("Initializing paging...");
-    if (!initPaging()) {
-        printf("Failed\n\r");
-        abort();
-    }
-    printf("Success\n\r");
 
+#if defined(INCLUDE_TESTS) && defined(HEAP_TESTS)
+    print("Heap tests...\r\n");
+    if (!heaptests()) {
+        printf("Failed\n\r");
+    } else {
+        printf("Successful\n\r");
+    }
+#endif
 
     // initialize heap
     printf("Initializing heap...");

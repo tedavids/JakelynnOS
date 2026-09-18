@@ -29,7 +29,6 @@ extern uint32_t _kernel_end;
 extern uint32_t _kernel_start;
 
 extern const uint32_t   PAGINGIMPLEMENTED;
-extern uint32_t         page_directory[1024];
 
 
 

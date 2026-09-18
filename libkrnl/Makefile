@@ -18,7 +18,7 @@ LD=i686-elf-gcc
 
 #initail flags
 #CFLAGS ?= -O2 -ggdb  -std=gnu23
-CFLAGS ?= -O0 -g -std=gnu23
+CFLAGS ?= -O0 -g -std=c23
 CPPFLAGS ?=
 LDFLAGS ?= 
 LIBS ?=
@@ -44,16 +44,17 @@ $(OBJDIR)/ports.o \
 $(OBJDIR)/multiboot.o \
 $(OBJDIR)/pmm.o \
 $(OBJDIR)/vmm.o \
-$(OBJDIR)/time.o \
+
+#$(OBJDIR)/time.o \
 $(OBJDIR)/bitarray.o \
 $(OBJDIR)/registers.o \
 $(OBJDIR)/krnlcmdline.o \
-$(OBJDIR)/pagetable.o \
-#$(OBJDIR)/heap.o \
+$(OBJDIR)/heap.o \
 $(OBJDIR)/heaptree.o \
 $(OBJDIR)/slaballoc.o \
+$(OBJDIR)/pagetable.o \
 $(OBJDIR)/pagealloctree.o \
-$(OBJDIR)/paging.o \
+#$(OBJDIR)/paging.o \
 
 HOSTEDOBJS = \
 
@@ -89,8 +90,8 @@ $(OBJDIR)/pmm.o : $(SRCDIR)/pmm.c
 $(OBJDIR)/vmm.o : $(SRCDIR)/vmm.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
-$(OBJDIR)/paging.o : $(SRCDIR)/paging.c
-	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+#$(OBJDIR)/paging.o : $(SRCDIR)/paging.c
+#	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/time.o : $(SRCDIR)/time.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)

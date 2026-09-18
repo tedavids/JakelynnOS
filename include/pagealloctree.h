@@ -27,9 +27,10 @@ extern uint16_t getPageTreeFreelistSize();
 extern uint32_t getPageTreeNumAlloc();
 
 // allocate pages
-void *allocPage(size_t size);
+// Parameters:  numpages - The number of pages to allocate 256 (1M) maximum
+void *allocPage(size_t numpages);
 // free a page allocation
-bool freePage(uint32_t ptr);
+bool freePage(void * ptr);
 
 // initialize the heap tree
 extern bool initPageTree();

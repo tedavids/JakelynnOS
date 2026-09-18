@@ -1,129 +1,151 @@
-// Physical Memory Management
+// Physical Memory Manager (PMM)
 
-/* Copyright (C) 2026 Tom Davidson
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
-#ifndef PMM_H
-#define PMM_H
+#ifndef _PMM_H
+#define _PMM_H
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <pagetable.h>
-
 #include <multiboot.h>
 
-// macros 
-// Round UP to the next page boundary
-#define PAGE_ALIGN_UP(addr)   (((addr) + 0x1000 - 1) & 0xFFFFF000)
+// Defines
 
-// Round DOWN to the previous page boundary
-#define PAGE_ALIGN_DOWN(addr) ((addr) & 0xFFFFF000)
+// number of bits to shift (left or right) to change a page offset to an address or visa versa
+#define MEM_PAGE_SHIFT              12
+// Number of bytes in a page of memory
+#define MEM_PAGE_SIZE               0x1000
+// Memory range error
+#define MEM_RANGE_ERROR             0xFFFFFFFF
+// memory address error
+#define MEM_ADDRESS_ERROR           0xFFFFFFFF
 
-// structures
-struct PhysMemInfo_t {
-    uint32_t    PagesExist;
-    uint32_t    PagesInUse;
-    uint32_t    PagesAvail;
-    uint32_t    PagesReserved;
-};
+// Macros
 
+// typedefs
 
+typedef uint32_t MemAddr_t;            // generic memory address (physical or virtual)
+typedef MemAddr_t PhysAddr_t;          // physical memory address
+typedef MemAddr_t RsvdAddr_t;          // Reserved address
+typedef MemAddr_t VirtAddr_t;          // Virtual Address Type
+typedef uint32_t PageOff_t;            // generic page offset
+typedef uint32_t pde_t;                // page directory entry index
+typedef uint32_t pte_t;                // page table entry index
 
+typedef uint32_t pagetable_array_t[1024][1024]; // page table array
 
-// external variables
-extern uint32_t                 page_directory[1024];
-extern struct PhysMemInfo_t     PhysMemInfo;
+// contains information about physical memory in general
+typedef struct {
+    uint32_t    numPagesExist;         // number of pages that exist
+    uint32_t    numPagesInUse;         // number of pages in use
+    uint32_t    numPagesAvail;         // number of page available
+    uint32_t    numPagesRsvd;          // number of pages reserved
+    uint32_t    numPagesAvailInUse;    // number of pages available and in use
+    uint32_t    numPagesRsvdInUse;     // number of page reserved and in use
+    uint32_t    numPagesDefect;        // number of pages defective
+} PhysMemInfo_t;
 
+// generic memory range
+typedef struct {
+    RsvdAddr_t    startaddr;        // starting memory addrees
+    RsvdAddr_t    endaddr;          // ending address
+} MemRange_t;
 
+typedef MemRange_t RsvdMemRange_t;  // reserved memory range
+    // generic page offset
 
+// variables
+extern pagetable_array_t * const    PAGETABLE;
 
-// get the physical address of the pde/pdt entry
-// Parameters:  address -- a pointer to the address the function returns
-//              pde -- the page directory entry (index)
-//              pte -- the page table entry (index)
+// functions
 
-// returns:     true if found, false otherwise
-//              if true, address  containts the address, otherwise it is set to a null pointer
-bool physAddrFromPdePdt(uint32_t *address, uint32_t pde, uint32_t pte);
-
-// get PDE physical address
-// Parameters:  address -- a pointer to where you want the physical address
-//              pde -- the index in the page direcory
-// Returns:     true if there is a phsical address, false otherwise
-//              if true address is the physical address, otherwise address is a null pointer
-bool physAddrOfPDE(uint32_t *address, pde_t pde);
-
-// get page from address
-uint32_t AddressToPage(uint32_t address);
-
-// get if physical page exists
-extern bool physMemExists(uint32_t phypageoffset);
-// get if physical memory page is available (not reserved)
-extern bool physMemAvail(uint32_t phypageoffset);
-// get if physical memory page is reserved
-extern bool physMemReserved(uint32_t phypageoffset);
-// get if physical memory is in a page table
-// also returns false if physical memory doesn't exist
-extern bool physMemInUse(uint32_t phypageoffset);
-
-
-// allocate a physical memory page
-
-// parameters:  physpage the physical page that is allocated
-
-// Returns:     true if page allocated, false otherwise
-extern bool allocPhysMem(uint32_t *physpage);
-
-// allocate a physical page more than once
-// note:  It is up to the caller to make sure it isn't deallocated prematurely
-extern bool multiAllocPhysMem(uint32_t physpage);
-
-// deallocate a phyical page
-
-// Parameters:  physpage the phiscal page to remove from a page table
-
-// Returns:     true if removed, false if not (it was multiple allocated, or doesnt' exist)
-
-extern bool deAllocPhysMem(uint32_t physpage);
-
-
-
-// process the multiboot memory map
-
-// external ONLY for testing
-
-// Parameters:  mmap -- the multiboot memory map
-// Returns:     true if successful
-
-extern bool processMultibootMemMap(const struct multiboot_mem_map_info_t * const mmap);
-
-// set in use memory flags
-// external ONLY for testing
-
+// get the number of reserved physical memory ranges
 // Parameters:  None
-// Returns:     the number of errors it found (should be 0)
+// Returns:     The number of reserved Memory ranges (not counting recoverable ones)
+extern uint32_t pmmNumRsvdMemRanges();
 
-extern uint32_t setInUsePhysicalMemory();
-
-// set the tail for free physical memory
-
-// initialize memory structures
-
+// get the physical memory information
 // Parameters:  None
+// Returns:     The physical memory information
+extern PhysMemInfo_t pmmGetPhysMemInfo();
 
-// Returns:     true if structures initialized, false otherwise
-extern bool initPMM(const struct multiboot_memory_info_t * const meminfo,  const struct multiboot_mem_map_info_t * const mmap);
+// Get a specific reserved memory range
+// Parameters:  idx - The range to retrieve (0 based)
+// Returns      The memory range of the index, if error the stating address of the range is MEM_RANGE_ERROR
+extern RsvdMemRange_t pmmGetRsvdMemRange(uint32_t idx);
+
+// Get the total amount of physical memory (in bytes)
+// Parameters:  None
+// Returns:     The number of bytes of physical memory
+extern uint32_t pmmMemSize();
+
+// Allocate a physical address
+// Parameters:  None
+// Returns:     The physical address allocated, or nullptr on failure
+extern PhysAddr_t pmmAlloc();
+
+// Free a physical address
+// Parameters:  physaddr - The address you got from physAlloc()
+// Returns:     true if free worked, false otherwise
+extern bool pmmFree(PhysAddr_t physaddr);
+
+// Is the page reserved
+// Parameters:  virtaddr - the address you want to know about
+// Returns:     true if reserved, false otherwise
+extern bool pmmIsPageRsvd(VirtAddr_t virtaddr);
+
+// Allocate a reserved address 
+// Parameters:  physaddr - the physical address to allocate
+// Returns:     The physical address, or nullptr on failure
+extern RsvdAddr_t pmmAllocRsvd(RsvdAddr_t rstdaddr) ;
+
+// Free a reserved address
+// Parameters:  rsvdaddr - The reserved returned by physAllocRsvd()
+// Returns:     true if successful, false if an error occured
+extern bool pmmFreeRsvd(RsvdAddr_t rsvdaddr);
+
+// Allocate a range of reserved memory
+// Parameters:  range - The memory range this must match the range provided by physGetRsvdMemRange(x)
+// Returns:     The start address of the memory range, or MEM_RANGE_ERROR
+extern RsvdAddr_t pmmAllocRsvdRange(RsvdMemRange_t range);
+
+// Free a reserved memory range
+// Parameters:  range -- The address range to free
+// Returns:     true if successful, false otherwise
+extern bool pmmFreeRsvdRange(RsvdMemRange_t range);
+
+// get the page offset from an address (both physical and virtual)
+// Parameters:  addr - The address to convert
+// Returns:     The page offset for the given address
+extern PageOff_t AddressToPageOff(MemAddr_t addr);
+
+// Get an address from a page offset
+// Parameters:  pageoff - The page offset to convert
+// Returns:     The first address for the page given
+extern MemAddr_t PageOffToAddress(PageOff_t pagoff);
+
+// align a page address up, IF it is not on a page boundry
+// Parameters:  addr -- the address to align
+// Returns:     The aligned address
+extern MemAddr_t PageAlignUp(MemAddr_t addr);
+
+// align a page address down, IF it is not on a page boundry
+// Parameters:  addr -- the address to align
+// Returns:     The aligned address
+extern MemAddr_t PageAlignDown(MemAddr_t addr);
+
+
+// flush the Translation Lookaside Buffer (TLB)
+// Parameters:  none
+// returns;     None
+extern void FlushTLB();
+
+// invalidate an individual page
+// Parameters:  virtaddress -- The virtual address of the page to be invalidated
+// Returns:     None
+void invalidatePage(VirtAddr_t * virtaddr);
+
+// Initialize physical memory structures
+// Parameters:  mmap -- Physical memory map
+// Returns:     true if successful, false otherwise
+bool initPMM(const multiboot_mem_map_info_t * const mmap);
+
 #endif

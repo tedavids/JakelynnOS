@@ -24,7 +24,7 @@ LDFLAGS ?=
 LIBS ?=
 
 #add my flags
-CFLAGS := $(CFLAGS) -std=gnu23 -ffreestanding -Wall -Wextra -pedantic -Wconversion -Wcast-align -Wcast-qual \
+CFLAGS := $(CFLAGS) -std=c23 -ffreestanding -Wall -Wextra -pedantic -Wconversion -Wcast-align -Wcast-qual \
 		 -Wredundant-decls -Wsign-conversion -Wswitch-default -Wundef -Wfloat-equal -Werror -fPIC
 CPPFLAGS := $(CPPFLAGS) -D__is_libtty -isystem ../include 
 LDFLAGS := $(LDFLAGS) -nostdlib  -Wl,-Map,output.map
@@ -39,6 +39,7 @@ LIBTTY_CPPFLAGS := $(LIBTTY_CPPFLAGS) $(ARCH_CPPFLAGS)
 FREEOBJS=$(OBJDIR)/multiboottests.o \
 $(OBJDIR)/pmmtests.o \
 $(OBJDIR)/vmmtests.o \
+$(OBJDIR)/heaptests.o \
 
 HOSTEDOBJS = \
 
@@ -65,6 +66,9 @@ $(OBJDIR)/vmmtests.o : $(SRCDIR)/vmmtests.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/multiboottests.o : $(SRCDIR)/multiboottests.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+$(OBJDIR)/heaptests.o : $(SRCDIR)/heaptests.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:

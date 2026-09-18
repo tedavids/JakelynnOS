@@ -88,18 +88,11 @@ badboot:
 	jmp badboot
 
 boot:
+	# save multiboot info
+    mov %ebx, (MULTIBOOT_INFO_ADDRESS - 0xC0000000)
 
 	# inhibit interrupts until the APIC is set up
 	cli
-
-	# set page table addresses (physical addresses)
-	# LINKADDRESS is where the kernel is loaded in memory
-	movl (LINKADDRESS - 0xC0000000), %eax
-	movl %eax, (PAGETABLE000 - 0xC0000000)	
-	movl %eax, (PAGETABLEFF8 - 0xC0000000)
-	addl $0x2E000, (PAGETABLEFF8 - 0xC0000000)
-	movl %eax, (PAGETABLEC00 - 0xC0000000)
-	addl $0x30000, (PAGETABLEC00 - 0xC0000000)
 
 	# mask the APIC until we get it set up
 	xor %ax, %ax
@@ -107,8 +100,7 @@ boot:
 	out	%al, $0x21		# Mask all master PIC IRQs
 	out %al, $0xA1		# Mask all slave PIC IRQs
 
-	# save multiboot info
-    mov %ebx, (MULTIBOOT_INFO_ADDRESS - 0xC0000000)
+
 
 # enable the A20 gate 
 	inb $0x92, %al
@@ -116,63 +108,28 @@ boot:
 	outb %al, $0x92
 
 # Map Memory Addresses
-	# Map page page 0
 
-	movl	(LINKADDRESS - 0xC0000000), %edi	# Physical address to start at
-	xor		%esi, %esi			# Map starting at zero
-	movl	$1024, %ecx			# map the entire 1st 4 megs, we don't know where multiboot is
-	call 	MapPage				# do the map
 
-.global temp
-temp:
-
-	# Map VGA video memory 
+# Map VGA video memory 
 	movl $0xA0000, %esi
-	movl (PAGETABLEFF8 - 0xC0000000), %edi
+	movl $PAGETABLEFF8 - 0xC0000000, %edi
 	addl $(4*992), %edi
 	movl $32, %ecx
 	call MapPage
 
-# Map Kernel
-	# Physical address of PAGETABLEC00.
-	movl (PAGETABLEC00 - 0xC0000000), %edi
+# Map page page C00
 
-	# First address to map is page table offset 0.
-	movl $0, %esi
+	movl	$PAGETABLEC00 - 0xC0000000, %edi	# Physical address to start at
+	xor		%esi, %esi			# Map starting at zero
+	movl	$1024, %ecx			# map the entire 1st 4 megs, we don't know where multiboot is
+	call 	MapPage				# do the map
 
-	# Map 1024 pages.  if the kernel gets longer add a page table after _C00
-	# and make this 2048
-	movl $1024, %ecx
+# Map page page C04
 
-bootprocaddress:
-	# Only map the kernel.
-	cmpl $(_boot_kernel_start), %esi
-	jl loadaddress
-
-	# do we have the entire kernel
-	cmpl $(_kernel_end - 0xC0000000), %esi
-	jg krnlmapdone
-
-	# Map physical address as "present, writable". Note that this maps
-	# .text and .rodata as writable. TODO: write a function to set permissions
-	# correctly
-	movl %esi, %edx		# this is our address
-	orl $0x003, %edx	# set present and writable bits
-	movl %edx, (%edi)	# put it in the table
-
-loadaddress:
-	# Size of page is 4096 bytes.
-	addl $4096, %esi
-	# Size of entries in PAGETABLEC00 is 4 bytes.
-	addl $4, %edi
-	# Loop to the next entry if we haven't finished.
-	loop bootprocaddress
-
-	# we have mapped the kernel, now set up the video buffer
-.global krnlmapdone
-krnlmapdone:
-
-
+	movl	$PAGETABLEC04 - 0xC0000000, %edi	# Physical address to start at
+	#xor		$0x00400000, %esi			# Start were C00 left off
+	movl	$1024, %ecx			# map the entire 1st 4 megs, we don't know where multiboot is
+	call 	MapPage				# do the map
 
 
 	# The page table is used at both page directory entry 0 (virtually from 0x0
@@ -182,18 +139,21 @@ krnlmapdone:
 	# not change the next instruction, which continues to be physical. The CPU
 	# would instead page fault if there was no identity mapping.
 
-	# Map the page table to both virtual addresses 0x00000000 and 0xC0000000.
-	movl (PAGETABLEC00 - 0xC0000000), %eax
+	movl $PAGETABLEC00 - 0xC0000000, %eax
 	orl  $0x003, %eax
 	movl %eax, (page_directory - 0xC0000000) + 0
-
 	movl %eax, (page_directory - 0xC0000000) + (768 * 4)
 
-
+	# map the next 4 megs
+	movl $PAGETABLEC04 - 0xC0000000, %eax
+	orl  $0x003, %eax
+	movl %eax, (page_directory - 0xC0000000) + (1 * 4)
+	movl %eax, (page_directory - 0xC0000000) + (769 * 4)
 
 	# these pages aren't part of the kernel yet, but map them
 	# this is where we will map our video memory (high 32  integers)
-	movl (PAGETABLEFF8 - 0xC0000000), %eax
+	movl $PAGETABLEFF8 - 0xC0000000, %eax
+	and  $0xFFFFF000, %eax
 	orl  $0x003, %eax
 	movl %eax, page_directory - 0xC0000000 + ( 1022 * 4)
 
@@ -203,9 +163,10 @@ krnlmapdone:
 	movl %eax, page_directory - 0xC0000000 + (1023 * 4)
 
 	# Set cr3 to the address of the page_directory.
-	movl $(page_directory - 0xC0000000), %ecx
+	movl $page_directory - 0xC0000000, %ecx
 	movl %ecx, %cr3
-
+.global justb4jmp
+justb4jmp:
 	# Enable paging and the write-protect bit.
 	movl %cr0, %ecx
 	orl $0x80010000, %ecx
@@ -220,7 +181,7 @@ krnlmapdone:
 # Parameters:	%EDI = page table address to put info at
 #				%ESI = Physical address to start at
 #				%ECX = Number of addresses to map
-
+.global MapPage
 MapPage:
 	# Map physical address as "present, writable"
 	movl	%esi, %edx		# this is our address
@@ -248,7 +209,7 @@ _start2:
 
 	# Unmap the identity mapping as it is now unnecessary. 
 	# replace with the identity mapping for the first meg
-	movl $(0x1000000 + 0x003), page_directory + 0
+#	movl $(0x1000000 + 0x003), page_directory + 0
 
 	# Reload crc3 to force a TLB flush so the changes to take effect.
 	movl %cr3, %ecx
@@ -475,6 +436,23 @@ IDTR:	.word	0x0000
 .global MULTIBOOT_INFO_ADDRESS
 .type MULTIBOOT_INFO_ADDRESS, @object
 MULTIBOOT_INFO_ADDRESS: .long  0x00000000
+#page initPageTables
+.align 4096
+.global PAGETABLE000
+.type PAGETABLE000, @object
+PAGETABLE000:	.fill 1024,4,0
+.global PAGETABLE004
+.type PAGETABLE004, @object
+PAGETABLE004:	.fill 1024,4,0
+.global PAGETABLEFF8
+.type PAGETABLEFF8, @object
+PAGETABLEFF8:	.fill 1024,4,0
+.global PAGETABLEC00
+.type PAGETABLEC00, @object
+PAGETABLEC00:	.fill 1024,4,0
+.global PAGETABLEC04
+.type PAGETABLEC04, @object
+PAGETABLEC04:	.fill 1024,4,0
 
 #	BBBBBB    SSSSSSSS  SSSSSSSS      
 #   BB    BB  SS        SS
@@ -488,17 +466,6 @@ MULTIBOOT_INFO_ADDRESS: .long  0x00000000
 .global stack_bottom
 .type stack_bottom, @object
 stack_bottom:
-# these are intended to be temporary addresses
-.global PAGETABLE000
-.type PAGETABLE000, @object
-.lcomm PAGETABLE000, 4
-.global PAGETABLEFF8
-.type PAGETABLEFF8, @object
-.lcomm PAGETABLEFF8, 4
-.global PAGETABLEC00
-.type PAGETABLEC00, @object
-.lcomm PAGETABLEC00, 4
-
 .skip 0x8000 # 32 KiB
 .global stack_top
 .type stack_top, @object

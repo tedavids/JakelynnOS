@@ -24,10 +24,11 @@ Full disclosure:  While I was a professional developer on the IBMi(AS/400) I hav
 * Get test scripts written
   * libc - not started
   * libkrnl
-    * Multiboot tests
+    * Multiboot tests -- not started
   * libintr - not started
   * libcmd - not started
-* Get Virtual Memory Manager working -- Complete
+* Redo Physical Memory Manager...Again
+* Get Virtual Memory Manager working based on new PMM
 * Get backspace working on keyboard input routine, plus move to kbd.c -- Complete
 * Get all the frame buffer info from MULTIBOOT2 - Complete
 * Print all multiboot info -- Done for now, APM, and 
@@ -45,12 +46,15 @@ Full disclosure:  While I was a professional developer on the IBMi(AS/400) I hav
 * Revisit timer setup, need to make a timer that kicks off every x MS (set by command line?)
 * Start working on a scheduler and multithreading
 
-## AI Usage
+## AI Usage Policy
 
 I use AI for the following:
 * code reviews
 * gernerate code that I can study, then I write my own code.  I do not use AI generated code, it defeats the purpose of this project which is learningS
 * Suggestions on how to implement something
+
+I don't use it for
+* generating code to include in this project
 
 ## 🛠️ Prerequisite
 
@@ -74,3 +78,5 @@ I use AI for the following:
 Distributed under GPL3 
 
 ## Notes
+  * Second pass enhancements
+    * Change heap to take one page allocations from the bottom of the heap, and multi page enhancements from the top to reduce fragmentation
