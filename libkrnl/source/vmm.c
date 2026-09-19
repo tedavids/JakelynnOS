@@ -204,9 +204,31 @@ extern bool pgdirValidatePgDir(bool sync) {
     return pgdirSyncAttr(sync);
 }
 
+// Initialize the Page Directory structures
+// Parameters:  None
+// Returns:     true if successful, false otherwise
+extern bool initPgDir() {
+    bool rtncde = true;
+
+    for (uint32_t i = 0; i < 1024; i++) {
+        
+    }
+    return rtncde;
+}
+
 // VV         VV IIIIII RRRRRR  TTTTTTTT   MM     MM EEEEEE MM     MM
 //  VV       VV    II   RR   RR    TT      MMM   MMM EE     MMM   MMM
 //   VV     VV     II   RR   RR    TT      MMMM MMMM EEEEE  MMMM MMMM
 //    VV   VV      II   RRRRRR     TT      MM  M  MM EE     MM  M  MM
 //     VV VV       II   RR  RR     TT      MM     MM EE     MM     MM
 //      VVV      IIIIII RR   RR    TT      MM     MM EEEEEE MM     MM
+
+// Initialize the Virtual Memory Manager
+// Parameters:  None
+// Returns:     true if successful, false otherwise
+extern bool initVMM() {
+    // initalize the page directory
+    bool rtncde = initPgDir();
+
+    return rtncde;
+}

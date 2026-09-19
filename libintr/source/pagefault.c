@@ -22,9 +22,9 @@ void pagefault(struct interrupt_error_frame_t *frame) {
 
     printf("\n\r");
     printRegisterCR0();
-    printf("  Page causing fault: ");
+    printf("  Page causing fault: (");
     printRegisterCR2();
-    printf("  ");
+    printf(") ");
     printRegisterCR3();
     printf("\n\r");
 

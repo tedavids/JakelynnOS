@@ -148,6 +148,7 @@ clean:
 	$(MAKE) clean -C libtty
 	$(MAKE) clean -C libkbd
 	$(MAKE) clean -C libc 
+	$(MAKE) clean -C libintrS
 	$(MAKE) clean -C libkrnl
 	$(MAKE) clean -C libcmd
 	$(MAKE) clean -C libtests 
@@ -160,6 +161,7 @@ buildlibs:
 	$(MAKE) -C libtty
 	$(MAKE) -C libkbd
 	$(MAKE) -C libc 
+	$(MAKE) -C libintr
 	$(MAKE) -C libkrnl
 	$(MAKE) -C libcmd
 	$(MAKE) -C libtests

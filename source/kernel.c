@@ -114,30 +114,32 @@ void kernel_main() {
     }
     printf("Success\n\r");
 
-#if defined(INCLUDE_TESTS) && defined(PMM_TESTS) 
-    print("Starting Physical Memory Manager Tests\n\r");
-    if (!pmmtests()) {
-        print("Failed\n\r");
-    } else {
-        print("Success\n\r");
-    }
-#endif 
-
-#if defined(INCLUDE_TESTS) && defined(VMM_TESTS)
-    print("Starting virtual memory manager tests...\r\n");
-    if (!vmmtests()) {
-        printf("Failed\n\r");
-    } else {
-        printf("Successful\n\r");
-    }
-#endif
-/*
     printf("Initializing virtual memory manager...");
     if (!initVMM()) {
         printf("Failed\n\r");
         abort();
     }
     printf("Success\n\r");   
+
+    #if defined(INCLUDE_TESTS) && defined(VMM_TESTS) 
+    print("Starting Virtual Memory Manager Tests\n\r");
+    if (!vmmtests()) {
+        print("Failed\n\r");
+    } else {
+        print("Success\n\r");
+    }
+    #endif 
+
+/*
+    #if defined(INCLUDE_TESTS) && defined(VMM_TESTS)
+    print("Starting virtual memory manager tests...\r\n");
+    if (!vmmtests()) {
+        printf("Failed\n\r");
+    } else {
+        printf("Successful\n\r");
+    }
+    #endif
+
 
 #if defined(INCLUDE_TESTS) && defined(HEAP_TESTS)
     print("Heap tests...\r\n");

@@ -127,7 +127,6 @@ boot:
 # Map page page C04
 
 	movl	$PAGETABLEC04 - 0xC0000000, %edi	# Physical address to start at
-	#xor		$0x00400000, %esi			# Start were C00 left off
 	movl	$1024, %ecx			# map the entire 1st 4 megs, we don't know where multiboot is
 	call 	MapPage				# do the map
 
@@ -165,8 +164,7 @@ boot:
 	# Set cr3 to the address of the page_directory.
 	movl $page_directory - 0xC0000000, %ecx
 	movl %ecx, %cr3
-.global justb4jmp
-justb4jmp:
+
 	# Enable paging and the write-protect bit.
 	movl %cr0, %ecx
 	orl $0x80010000, %ecx
@@ -436,14 +434,11 @@ IDTR:	.word	0x0000
 .global MULTIBOOT_INFO_ADDRESS
 .type MULTIBOOT_INFO_ADDRESS, @object
 MULTIBOOT_INFO_ADDRESS: .long  0x00000000
-#page initPageTables
+#page initPageTable
 .align 4096
 .global PAGETABLE000
 .type PAGETABLE000, @object
 PAGETABLE000:	.fill 1024,4,0
-.global PAGETABLE004
-.type PAGETABLE004, @object
-PAGETABLE004:	.fill 1024,4,0
 .global PAGETABLEFF8
 .type PAGETABLEFF8, @object
 PAGETABLEFF8:	.fill 1024,4,0

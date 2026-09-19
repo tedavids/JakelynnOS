@@ -1,5 +1,6 @@
 // the Physical Memory Manager
 
+#include <registers.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -14,7 +15,6 @@
 #define MEM_PAGE_OFFSET_ERROR       0xFFFFFFFF
 
 extern uint32_t PAGETABLE000[1024];
-
 // typedefs
 typedef PageOff_t PhysPageOff_t;        // the physical Page offset
 
@@ -282,12 +282,12 @@ bool physProcessVideoMemory() {
     return true;
 }
 
-// initialize the page tables
+// Clear page tables we don't need
 // Parameters:  None
-// Returns:     true
-bool initPageTables() {
+// Returns:     true if successful, false otherwise
+bool clearUnneededPTEs() {
 
-    // remove mappings to memory that doesn't exist
+   // remove mappings to memory that doesn't exist
     for (pde_t pde = 0; pde < 1024; pde++) {
         // make sure it's an active page
         if (page_directory[pde]) {
@@ -306,16 +306,11 @@ bool initPageTables() {
         }
     }
 
-    // set up page table 0
-    // clear the table
-    memset(&PAGETABLE000,0,sizeof(PAGETABLE000));
-    // set pte 0
-    PAGETABLE000[0] = 0x3;      // page 0, read/write, present
-    //put it in the page page_directory
-    page_directory[0] = (uint32_t) &PAGETABLE000 - 0xC0000000 + 0x3; // read/write, present
+    // we don't need page 1 anymore
+    page_directory[1] = 0;
 
     // we shouldn't need anything on page 1 to 766 anymore
-    for (pde_t pde = 1; pde < 767; pde++) {
+    for (pde_t pde = 2; pde < 767; pde++) {
         if (page_directory[pde]) {
             for (pte_t pte = 0; pte < 1024; pte++) {
                 (*PAGETABLE)[pde][pte] = 0;
@@ -323,10 +318,27 @@ bool initPageTables() {
         }
     }
 
+    return true;
+}
+
+// initialize the page tables
+// Parameters:  None
+// Returns:     true
+bool initPageTables() {
+
+    // set up page table 0
+    // set pte 0
+    PAGETABLE000[0] = 0x3;      // page 0, read/write, present
+    //put it in the page page_directory
+    page_directory[0] = (uint32_t) &PAGETABLE000 - 0xC0000000 + 0x3; // read/write, present
+
+
+    bool rtncde = clearUnneededPTEs();
+
     // flush TLB
     FlushTLB();
 
-    return true;
+    return rtncde;
 }
 
 uint32_t pmmSetInUsePhysicalMemory() {
@@ -346,15 +358,13 @@ uint32_t pmmSetInUsePhysicalMemory() {
                         PhysMemPageSts[pageoff] |= PHYSICAL_MEMORY_IN_USE;
                     } else {
                         // exclude video memory, it isn't reportd
-                        if ((AddressToPageOff((*PAGETABLE)[pde][pte]) < 0xA0) || 
-                            (AddressToPageOff((*PAGETABLE)[pde][pte]) > 0xA7)) {
-                            printf("Error at pde=%ul, pte=%ul, value 0x%xl memory doesn't exist, cleared\n\r",
-                                pde,pte,((*PAGETABLE)[pde][pte] & 0xFFFFF000));
+                        if ((pageoff < 0xA0) || 
+                            (pageoff > 0xA7)) {
                             // remove the offending mapping
                             (*PAGETABLE)[pde][pte] = 0;
                             numerrors++;
                         }
-                    }
+                    } 
                 }
             }
         }
@@ -578,6 +588,7 @@ extern bool pmmFreeRsvdRange(RsvdMemRange_t range) {
 // Parameters:  None
 // Returns:     true if successful, false otherwise
 bool initPMM(const multiboot_mem_map_info_t * const mmap) {
+ 
     // check parameters 
     if (!mmap) return false;            // null pointer
     if (!mmap->count) return false;     // no map

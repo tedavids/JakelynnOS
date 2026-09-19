@@ -65,6 +65,11 @@ extern pte_t PteFromAddress(MemAddr_t address);
 // Returns:     true if in sync, false otherwise, sync should ensure a true return
 extern bool pgdirValidatePgDir(bool sync);
 
+// Initialize the Page Directory structures
+// Parameters:  None
+// Returns:     true if successful, false otherwise
+extern bool initPgDir();
+
 // virtual memory externals
 // Is the page a kernel page (ring 3)
 // Parameters:  virtaddr - The address to check
