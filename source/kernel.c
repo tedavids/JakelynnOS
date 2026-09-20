@@ -122,7 +122,7 @@ void kernel_main() {
     printf("Success\n\r");   
 
     #if defined(INCLUDE_TESTS) && defined(VMM_TESTS) 
-    print("Starting Virtual Memory Manager Tests\n\r");
+    print("Starting Virtual Memory Manager Tests...");
     if (!vmmtests()) {
         print("Failed\n\r");
     } else {
@@ -130,17 +130,9 @@ void kernel_main() {
     }
     #endif 
 
+
+
 /*
-    #if defined(INCLUDE_TESTS) && defined(VMM_TESTS)
-    print("Starting virtual memory manager tests...\r\n");
-    if (!vmmtests()) {
-        printf("Failed\n\r");
-    } else {
-        printf("Successful\n\r");
-    }
-    #endif
-
-
 #if defined(INCLUDE_TESTS) && defined(HEAP_TESTS)
     print("Heap tests...\r\n");
     if (!heaptests()) {

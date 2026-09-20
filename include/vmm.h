@@ -39,8 +39,7 @@ typedef struct {
     uint32_t    SwappedPages;
 } VirtMemInfo_t;
 
-
-
+typedef uint32_t PageDirectory_t[1024];
 
 // get an address from a page directory entry and page table entry
 // Parameters:  pde - the page directory entry
@@ -65,33 +64,12 @@ extern pte_t PteFromAddress(MemAddr_t address);
 // Returns:     true if in sync, false otherwise, sync should ensure a true return
 extern bool pgdirValidatePgDir(bool sync);
 
-// Initialize the Page Directory structures
-// Parameters:  None
-// Returns:     true if successful, false otherwise
-extern bool initPgDir();
+// Set the current page directory
+// Parameters:  pgdir - A pointer to the page directory
+// Returns:     The old page directory
+PageDirectory_t *pgdirSetPgDir(PageDirectory_t *dir);
 
-// virtual memory externals
-// Is the page a kernel page (ring 3)
-// Parameters:  virtaddr - The address to check
-// Returns:     true if the address is assigned to the kernel, false otherwise
-extern bool vmmIsKrnlMem(VirtAddr_t virtaddr);
-
-// Set the kernel attribute for the address
-// The companion function is vmmSetUserMem()
-// Parametwers: virtaddr - The virtual address to set to kernel
-// Returns:     true if it was set, false if it wasn't (it was already kernel)
-extern bool vmmSetKrnlMem(VirtAddr_t virtaddr);
-
-// Is the page a user page (ring 0)
-// Parameters:  virtaddr - the virtual address to check
-// Returns:     true if the kernel memory attribute is not set, false if it is
-extern bool vmmIsUserMem(VirtAddr_t vrtaddr);
-
-// Clear the kernel attribute for the address
-// The companion function is vmmSetKrnlMem()
-// Parametwers: virtaddr - The virtual address to set to User
-// Returns:     true if it was set, false if it wasn't (it was already user)
-extern bool vmmSetUserMem(VirtAddr_t virtaddr);
+// Virtual memory External 
 
 // is the memory read only
 // Parameters:  virtaddr - the virtual address to check
@@ -253,6 +231,11 @@ extern VirtAddr_t vmmUAllocBottomBlock(size_t size,bool invalidate);
 //                          vmmUKllocTopBlock or vmmUAllocBottomBlock
 //              invalidate - invalidate the page (if you don't intend to do a FlushTLB)
 extern bool vmmUFreeBlock(MemRange_t virtrange, bool invalidate);
+
+// Get information about the virtual memory
+// Parameters:  none
+// Returns:     Information on virtual memory
+VirtMemInfo_t vmmVirtMemInfo();
 
 // Initialize the Virtual Memory Manager
 // Parameters:  None
