@@ -148,17 +148,66 @@ bool pgdirIsPATMem(uint32_t idx) {
 }
 
 // Is the property page directory attribute global
-// Parameters:  idx - The property page attribute
+// Parameters:  idx - The property page index
 // Returns:     true if is global, false otherwise
 bool pgdirIsGlobal(uint32_t idx) {
     return ((*vmmPgDirPropPID)[idx] & PGDIR_GLOBAL);
 }
 
 // Is the page directory attribute global
-// Parameters:  idx - The property page attribute
+// Parameters:  idx - The page directory index
 // Returns:     true if is global, false otherwise
 bool pgdirIsGlobalMem(uint32_t idx) {
     return ((*vmmPageDirectoryPID)[idx] & DIR_GLOBAL);
+}
+
+// Set the page direcotry property bit to Global
+// Parameteers: idx - The index of the property page
+// Returns:     true on success, false otherwise
+bool pgdiSetGlobal(uint32_t idx) {
+    // if it is already set we can't set it agin
+    if (pgdirIsGlobal(idx)) return false;
+    // set it
+    (*vmmPgDirPropPID)[idx] |= PGDIR_GLOBAL;
+    return true;
+}
+
+// Clear the page directory property bit for global
+// Paraters:    idx - The indx of the proper page
+// Returns:     true if successful, false otherwise
+bool pgdirClearGlobal(uint32_t idx) {
+    // if the bit is clear, we can't clear it again
+    if (!pgdirIsGlobal(idx)) return false;
+
+    // clear the bit
+    (*vmmPgDirPropPID)[idx] = (uint8_t)~PGDIR_GLOBAL;
+    return true;
+}
+
+// Change the global bit on the page direcory
+// Parameters:  idx - The index of the page directory
+//              seton - Do we set teh bit on (otherwise off)
+//              invalidate - Do we want to invalidate the page
+bool pgdirChgGlobalMem(uint32_t idx, bool seton, bool invalidate) {
+    // set bit on
+    if (seton) {
+        // if it is already on we can't set it again
+        if (pgdirIsGlobalMem(idx)) return false;
+        // set it on
+        (*vmmPageDirectoryPID)[idx] |= DIR_GLOBAL;
+    } else {
+        // clear bit
+        // if already clear we can't clear it again
+        if (!pgdirIsGlobalMem(idx)) return false;
+        // clear it
+        (*vmmPageDirectoryPID)[idx] &= (uint8_t)~DIR_GLOBAL;
+    }
+    // invalidate if necessary
+    if (invalidate) {
+        invalidatePage(&(*vmmPageDirectoryPID)[idx]);
+    }
+
+    return true;
 }
 
 // Change the properties to an Attribute mask
