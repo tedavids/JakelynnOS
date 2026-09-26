@@ -42,6 +42,7 @@ FREEOBJS= $(OBJDIR)/gdt.o\
 $(OBJDIR)/getselectortext.o \
 $(OBJDIR)/ports.o \
 $(OBJDIR)/multiboot.o \
+$(OBJDIR)/pgdir.o \
 $(OBJDIR)/pmm.o \
 $(OBJDIR)/vmm.o \
 
@@ -90,8 +91,8 @@ $(OBJDIR)/pmm.o : $(SRCDIR)/pmm.c
 $(OBJDIR)/vmm.o : $(SRCDIR)/vmm.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
-#$(OBJDIR)/paging.o : $(SRCDIR)/paging.c
-#	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+$(OBJDIR)/pgdir.o : $(SRCDIR)/pgdir.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/time.o : $(SRCDIR)/time.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)

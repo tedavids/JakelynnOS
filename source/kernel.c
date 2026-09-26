@@ -65,6 +65,14 @@ void kernel_main() {
 
     printf("Boot Status: 0x%xl\r\n",BOOTSTATUS);
 
+#if defined(INCLUDE_TESTS) && defined(LIBC_TESTS) 
+    print("Starting libc.a Tests...");
+    if (!testlibc()) {
+        print("Failed\n\r");
+    } else {
+        print("Success\n\r");
+    }
+#endif  
 
     // load the IDT, this MUST follow load APIC because it starts
     // interrupts again
@@ -121,14 +129,14 @@ void kernel_main() {
     }
     printf("Success\n\r");   
 
-    #if defined(INCLUDE_TESTS) && defined(VMM_TESTS) 
+#if defined(INCLUDE_TESTS) && defined(VMM_TESTS) 
     print("Starting Virtual Memory Manager Tests...");
     if (!vmmtests()) {
         print("Failed\n\r");
     } else {
         print("Success\n\r");
     }
-    #endif 
+#endif 
 
 
 

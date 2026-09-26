@@ -50,6 +50,7 @@ $(OBJDIR)/snprintf.o \
 $(OBJDIR)/printf.o \
 $(OBJDIR)/putchar.o \
 $(OBJDIR)/puts.o \
+$(OBJDIR)/bitmap.o \
 
 HOSTEDOBJS = \
 
@@ -109,6 +110,9 @@ $(OBJDIR)/putchar.o : $(SRCDIR)/putchar.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/puts.o : $(SRCDIR)/puts.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+$(OBJDIR)/bitmap.o : $(SRCDIR)/bitmap.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:

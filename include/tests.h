@@ -22,10 +22,15 @@
 // enable tests
 #define INCLUDE_TESTS
 
+#define LIBC_TESTS
 #define MULTIBOOT_TESTS
 #undef PMM_TESTS
 #define VMM_TESTS
 #define HEAP_TESTS
+
+#ifdef LIBC_TESTS
+extern bool testlibc();
+#endif
 
 #ifdef MULTIBOOT_TESTS
 extern bool multiboottest();

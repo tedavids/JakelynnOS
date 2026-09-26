@@ -40,6 +40,7 @@ FREEOBJS=$(OBJDIR)/multiboottests.o \
 $(OBJDIR)/pmmtests.o \
 $(OBJDIR)/vmmtests.o \
 $(OBJDIR)/heaptests.o \
+$(OBJDIR)/testlibc.o \
 
 HOSTEDOBJS = \
 
@@ -69,6 +70,9 @@ $(OBJDIR)/multiboottests.o : $(SRCDIR)/multiboottests.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 $(OBJDIR)/heaptests.o : $(SRCDIR)/heaptests.c
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+
+$(OBJDIR)/testlibc.o : $(SRCDIR)/testlibc.c
 	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:

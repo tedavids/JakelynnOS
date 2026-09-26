@@ -22,6 +22,7 @@
 #include <stddef.h>
 
 #include <pmm.h>
+#include <pgdir.h>
 
 // defines
 
@@ -39,7 +40,7 @@ typedef struct {
     uint32_t    SwappedPages;
 } VirtMemInfo_t;
 
-typedef uint32_t PageDirectory_t[1024];
+
 
 // get an address from a page directory entry and page table entry
 // Parameters:  pde - the page directory entry
@@ -57,19 +58,15 @@ extern pde_t PdeFromAddress(MemAddr_t address);
 // Returns:     the pde for the address
 extern pte_t PteFromAddress(MemAddr_t address);
 
-// page directory externals
 
-// Validate the page directory attributes with the actual page directory
-// Parameters:  sync -- Resync attributes from actual page directory
-// Returns:     true if in sync, false otherwise, sync should ensure a true return
-extern bool pgdirValidatePgDir(bool sync);
-
-// Set the current page directory
-// Parameters:  pgdir - A pointer to the page directory
-// Returns:     The old page directory
-PageDirectory_t *pgdirSetPgDir(PageDirectory_t *dir);
 
 // Virtual memory External 
+
+// are the pte and pde valid
+// Parameters:  pde - the page direcory index
+//              pte - the page table index
+// Returns:     true if the indexes are valid, false otherwise
+extern bool vmmPdePteValid(pde_t pde, pte_t pte);
 
 // is the memory read only
 // Parameters:  virtaddr - the virtual address to check
