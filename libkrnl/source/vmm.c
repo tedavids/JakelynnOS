@@ -176,7 +176,7 @@ VirtMemInfo_t vmmVirtMemInfo() {
 // Returns:     true if successful, false otherwise
 bool initVMM() {
     // initalize the page directory
-    bool rtncde = pgdirInitPgDir();
+    bool rtncde = pgdirInitPgDir(nullptr, nullptr);
 
     // clear Virtual Memory Information
     VirtMemInfo.KernelPages = 0;

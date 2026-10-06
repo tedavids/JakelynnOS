@@ -6,6 +6,7 @@
 // typedefs
 
 typedef uint32_t PageDirectory_t[1024];
+typedef uint8_t  PgDirProp_t[1024];
 
 // externals
 extern PageDirectory_t page_directory;
@@ -21,6 +22,11 @@ extern bool pgdirIsValidIdx(uint32_t idx);
 // Parameters:  sync -- Resync attributes from actual page directory
 // Returns:     true if in sync, false otherwise, sync should ensure a true return
 extern bool pgdirValidatePgDir(bool sync);
+
+// Is the page directory Page Attribute Table bit set in properties
+// Parameters:  idx - page directory index
+// Returns:     true if set, false otherwise
+extern bool pgdirIsPAT(uint32_t idx);
 
 // Is the page directory Page Attribute Table bit set
 // Parameters:  idx - page directory index
@@ -56,29 +62,29 @@ extern bool pgdirChgGlobalMem(uint32_t idx, bool seton, bool invalidate);
 // Is the page size 4K
 // Parameters:  idx - The index of the property array
 // Returns:     true if 4K, false otherwise
-extern bool pgdirIs4K(uint32_t idx);
+extern bool pgdirIs4M(uint32_t idx);
 
-// Is the page in the actual page directory 4K
+// Is the page in the actual page directory 4M
 // Parameters:  idx - The index of the page directory
 // Returns:     true if 4K, false otherwise
-extern bool pgdirIs4kMem(uint32_t idx);
+extern bool pgdirIs4MMem(uint32_t idx);
 
-// Set the 4K bit in the page directory property table
+// Set the 4M bit in the page directory property table
 // Parameters:  idx - Index in the property table
 // Returns:     true changed, false otherwise
-extern bool pgdirSet4k(uint32_t idx);
+extern bool pgdirSet4M(uint32_t idx);
 
-// clear the 4k bit in the page directory property table
+// clear the 4M bit in the page directory property table
 // Parameters:  idx - The index in the property table
 // Returns:     true if changed, false otherwise
-extern bool pgdirClear4k(uint32_t idx);
+extern bool pgdirClear4M(uint32_t idx);
 
-// clear or set the 4K page bit in the actual page directory
+// clear or set the 4M page bit in the actual page directory
 // Parameters:  idx - The page directory index
 //              seton - Set bit on
 //              invalidate - invalidate page
 // Return:      true if successful, false otherwise
-extern bool pgdirChg4kMem(uint32_t idx, bool seton, bool invalidate);
+extern bool pgdirChg4MMem(uint32_t idx, bool seton, bool invalidate);
 
 // Is the cache disabled in the property array
 // Parameters:  idx - The index of the property array
@@ -188,14 +194,16 @@ extern bool pgdirSetPresentMem(uint32_t idx, bool invalidate);
 // Returns:     true if successful, false otherwise
 extern bool pgdirClearPresentMem(uint32_t idx, bool invalidate);
 
-// Set the current page directory
-// Parameters:  pgdir - A pointer to the page directory
-// Returns:     The old page directory
-PageDirectory_t *pgdirSetPgDir(PageDirectory_t *dir);
+// swap page directory
+// Parameters:  dir -- the new page directory
+//              props -- The new property array
+// Returns:     true if successful, false otherwise
+extern bool pgdirSwapPgDir(PageDirectory_t * dir, PgDirProp_t *props);
 
 // Initialize the Page Directory structures
-// Parameters:  None
+// Parameters:  dir - the page directory to initialize, if null the kernels page directory
+//              props - The property array of the page directory, if null defaults to pgdirPgDirProp
 // Returns:     true if successful, false otherwise
-extern bool pgdirInitPgDir();
+extern bool pgdirInitPgDir(PageDirectory_t * dir, PgDirProp_t *props);
 
 #endif
